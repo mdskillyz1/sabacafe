@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Saba Cafe",
+    "slug": "saba-cafe",
+    "scheme": "saba",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sabacafe.app"
+    },
+    "android": {
+      "package": "com.sabacafe.app"
+    },
+    "plugins": ["expo-router"]
+  }
+}

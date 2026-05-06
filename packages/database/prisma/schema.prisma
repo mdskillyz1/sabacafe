@@ -1,0 +1,396 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  STAFF
+  MANAGER
+  ADMIN
+}
+
+enum FulfilmentType {
+  PICKUP
+  DELIVERY
+}
+
+enum OrderStatus {
+  RECEIVED
+  PREPARING
+  READY_FOR_PICKUP
+  OUT_FOR_DELIVERY
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  REQUIRES_ACTION
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  HIDDEN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  CANCELLED
+  SEATED
+  COMPLETED
+}
+
+model User {
+  id              String           @id @default(cuid())
+  email           String           @unique
+  passwordHash    String?
+  name            String
+  phone           String?
+  role            Role             @default(CUSTOMER)
+  customerProfile CustomerProfile?
+  addresses       Address[]
+  carts           Cart[]
+  orders          Order[]
+  reviews         Review[]
+  loyaltyPoints   LoyaltyPoint[]
+  adminUser       AdminUser?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model CustomerProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  marketingOptIn Boolean @default(false)
+  referralCode String   @unique
+  referredBy   String?
+  createdAt    DateTime @default(now())
+}
+
+model Address {
+  id           String  @id @default(cuid())
+  userId       String?
+  user         User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  label        String?
+  line1        String
+  line2        String?
+  city         String
+  postcode     String
+  phone        String?
+  deliveryNote String?
+  isDefault    Boolean @default(false)
+  orders       Order[]
+}
+
+model MenuCategory {
+  id          String     @id
+  name        String
+  slug        String     @unique
+  description String
+  sortOrder   Int        @default(0)
+  hidden      Boolean    @default(false)
+  items       MenuItem[]
+}
+
+model MenuItem {
+  id           String           @id
+  categoryId   String
+  category     MenuCategory     @relation(fields: [categoryId], references: [id])
+  name         String
+  slug         String           @unique
+  description  String
+  pricePence   Int
+  image        String
+  allergens    String[]
+  spiceLevel   Int              @default(0)
+  halal        Boolean          @default(true)
+  available    Boolean          @default(true)
+  hidden       Boolean          @default(false)
+  popular      Boolean          @default(false)
+  recommended  Boolean          @default(false)
+  prepMinutes  Int              @default(15)
+  sortOrder    Int              @default(0)
+  options      MenuItemOption[]
+  addOns       AddOn[]
+  orderItems   OrderItem[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+model MenuItemOption {
+  id              String   @id @default(cuid())
+  menuItemId      String
+  menuItem        MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  name            String
+  priceDeltaPence Int      @default(0)
+}
+
+model AddOn {
+  id         String   @id @default(cuid())
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  name       String
+  pricePence Int
+}
+
+model Cart {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sessionId String?
+  lines     Json
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id                String          @id @default(cuid())
+  orderNumber       String          @unique
+  userId            String?
+  user              User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  customerName      String
+  email             String
+  phone             String
+  fulfilmentType    FulfilmentType
+  addressId         String?
+  address           Address?        @relation(fields: [addressId], references: [id])
+  deliveryNotes     String?
+  scheduledFor      DateTime?
+  status            OrderStatus     @default(RECEIVED)
+  paymentStatus     PaymentStatus   @default(PENDING)
+  subtotalPence     Int
+  discountPence     Int             @default(0)
+  deliveryFeePence  Int             @default(0)
+  vatPence          Int             @default(0)
+  totalPence        Int
+  promoCode         String?
+  stripePaymentIntentId String?
+  items             OrderItem[]
+  payment           Payment?
+  review            Review?
+  loyaltyPoints     LoyaltyPoint[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model OrderItem {
+  id             String   @id @default(cuid())
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId     String?
+  menuItem       MenuItem? @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+  name           String
+  unitPricePence Int
+  quantity       Int
+  optionIds      String[]
+  addOnIds       String[]
+  notes          String?
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  orderId               String        @unique
+  order                 Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider              String        @default("stripe")
+  providerPaymentId     String?
+  status                PaymentStatus @default(PENDING)
+  amountPence           Int
+  rawPayload            Json?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+}
+
+model Review {
+  id          String       @id @default(cuid())
+  userId      String?
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  orderId     String?      @unique
+  order       Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  rating      Int
+  name        String
+  comment     String
+  dishTags    String[]
+  status      ReviewStatus @default(PENDING)
+  adminReply  String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model GoogleReviewCache {
+  id             String   @id @default(cuid())
+  placeId        String
+  authorName     String
+  rating         Int
+  text           String
+  profilePhotoUrl String?
+  relativeTime   String?
+  reviewTime     DateTime?
+  cachedAt       DateTime @default(now())
+}
+
+model PromoCode {
+  id             String   @id @default(cuid())
+  code           String   @unique
+  description    String
+  percentOff     Int?
+  amountOffPence Int?
+  firstOrderOnly Boolean  @default(false)
+  minSpendPence  Int      @default(0)
+  active         Boolean  @default(true)
+  startsAt       DateTime?
+  endsAt         DateTime?
+}
+
+model LoyaltyPoint {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId   String?
+  order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  points    Int
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+model Table {
+  id        String    @id @default(cuid())
+  name      String
+  capacity  Int
+  active    Boolean   @default(true)
+  bookings  Booking[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("restaurant_tables")
+}
+
+model Booking {
+  id             String        @id @default(cuid())
+  tableId        String?
+  table          Table?        @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  customerName   String
+  email          String?
+  phone          String
+  partySize      Int
+  bookingDate    DateTime
+  startTime      String
+  endTime        String
+  notes          String?
+  adminNotes     String?
+  status         BookingStatus @default(PENDING)
+  requiresApproval Boolean     @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([bookingDate, startTime])
+  @@index([status])
+}
+
+model BookingAvailability {
+  id            String  @id @default(cuid())
+  dayOfWeek     Int
+  open          Boolean @default(true)
+  startTime     String
+  endTime       String
+  slotDurationMinutes Int @default(60)
+  bufferMinutes Int     @default(0)
+  maxPartySize  Int     @default(8)
+  requiresApproval Boolean @default(true)
+
+  @@unique([dayOfWeek])
+}
+
+model BlockedDate {
+  id     String   @id @default(cuid())
+  date   DateTime @unique
+  reason String?
+}
+
+model BlockedTimeSlot {
+  id        String   @id @default(cuid())
+  date      DateTime?
+  dayOfWeek Int?
+  startTime String
+  endTime   String
+  reason    String?
+
+  @@index([date])
+  @@index([dayOfWeek])
+}
+
+model SpecialOpeningHours {
+  id            String   @id @default(cuid())
+  date          DateTime @unique
+  open          Boolean  @default(true)
+  startTime     String?
+  endTime       String?
+  slotDurationMinutes Int?
+  bufferMinutes Int?
+  maxPartySize  Int?
+  requiresApproval Boolean?
+  note          String?
+}
+
+model OpeningHours {
+  id        String  @id @default(cuid())
+  dayOfWeek Int     @unique
+  openTime  String
+  closeTime String
+  closed    Boolean @default(false)
+}
+
+model DeliveryZone {
+  id              String  @id @default(cuid())
+  name            String
+  postcodePrefix  String
+  radiusMiles     Float
+  deliveryFeePence Int
+  minimumOrderPence Int
+  active          Boolean @default(true)
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastLogin DateTime?
+  createdAt DateTime @default(now())
+}
+
+model AppSettings {
+  id                    String  @id @default("global")
+  restaurantName         String  @default("Saba Cafe")
+  restaurantPhone        String?
+  restaurantAddress      String?
+  businessName           String  @default("Saba Cafe")
+  copyrightText          String?
+  address                String?
+  email                  String?
+  phone                  String?
+  openingHoursText       String?
+  socialLinks            Json?
+  googleReviewUrl        String?
+  googlePlaceId          String?
+  googleMapsEmbedUrl     String?
+  deliveryPaused         Boolean @default(false)
+  pickupPaused           Boolean @default(false)
+  cashEnabled            Boolean @default(false)
+  vatRate                Float   @default(0.2)
+  minimumOrderPence      Int     @default(1200)
+  appStoreUrl            String?
+  playStoreUrl           String?
+  instagramUrl           String?
+  tiktokUrl              String?
+  updatedAt              DateTime @updatedAt
+}

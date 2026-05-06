@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Saba Cafe | Authentic Somali Food</title>
+    <meta name="description" content="Saba Cafe, authentic Somali food on Old Kent Road." />
+    <style>
+      :root {
+        --cream: #fff7ea;
+        --date: #1b1715;
+        --clay: #9a4e2d;
+        --saffron: #d9902a;
+        --mint: #1e7a68;
+      }
+      * { box-sizing: border-box; }
+      [hidden] { display: none !important; }
+      body {
+        margin: 0;
+        background: #fffaf1;
+        color: var(--date);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      a { color: inherit; text-decoration: none; }
+      .display { font-family: Georgia, "Times New Roman", serif; letter-spacing: 0; }
+      .wrap { max-width: 1180px; margin: 0 auto; padding: 0 22px; }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 1px solid rgba(27, 23, 21, 0.08);
+        background: rgba(255, 250, 241, 0.94);
+        backdrop-filter: blur(14px);
+      }
+      nav { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+      .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; }
+      .brand img { width: 46px; height: 46px; object-fit: contain; border-radius: 50%; background: white; }
+      .links { display: flex; align-items: center; gap: 22px; color: rgba(27, 23, 21, 0.72); font-weight: 700; font-size: 14px; }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        padding: 14px 22px;
+        font-weight: 800;
+        border: 1px solid rgba(27, 23, 21, 0.14);
+      }
+      .btn.dark { background: var(--date); color: var(--cream); box-shadow: 0 18px 45px rgba(27, 23, 21, 0.14); }
+      .btn.light { background: white; color: var(--date); }
+      .btn.green { background: var(--mint); color: white; border-color: var(--mint); }
+      .hero {
+        position: relative;
+        overflow: hidden;
+        background: var(--cream);
+      }
+      .pattern {
+        position: absolute;
+        inset: 0;
+        opacity: 0.35;
+        background-image:
+          linear-gradient(135deg, rgba(217, 144, 42, 0.13) 25%, transparent 25%),
+          linear-gradient(225deg, rgba(30, 122, 104, 0.11) 25%, transparent 25%),
+          linear-gradient(45deg, rgba(154, 78, 45, 0.1) 25%, transparent 25%),
+          linear-gradient(315deg, rgba(217, 144, 42, 0.1) 25%, #fff7ea 25%);
+        background-position: 16px 0, 16px 0, 0 0, 0 0;
+        background-size: 32px 32px;
+      }
+      .hero-grid {
+        position: relative;
+        min-height: calc(100vh - 72px);
+        display: grid;
+        grid-template-columns: 1fr 0.92fr;
+        gap: 48px;
+        align-items: center;
+        padding-top: 54px;
+        padding-bottom: 54px;
+      }
+      .badge {
+        display: inline-flex;
+        border-radius: 999px;
+        background: rgba(30, 122, 104, 0.1);
+        color: var(--mint);
+        border: 1px solid rgba(30, 122, 104, 0.18);
+        padding: 8px 13px;
+        font-size: 13px;
+        font-weight: 800;
+      }
+      h1 {
+        margin: 24px 0 0;
+        max-width: 780px;
+        font-size: clamp(52px, 8vw, 94px);
+        line-height: 0.96;
+        font-weight: 700;
+      }
+      .lead {
+        margin-top: 26px;
+        max-width: 690px;
+        color: rgba(27, 23, 21, 0.72);
+        font-size: 19px;
+        line-height: 1.8;
+      }
+      .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+      .meta { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 32px; color: rgba(27, 23, 21, 0.68); font-size: 14px; }
+      .food {
+        min-height: 520px;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 22px 60px rgba(27, 23, 21, 0.16);
+        background: #1b1715;
+      }
+      .food img {
+        width: 100%;
+        height: 100%;
+        min-height: 520px;
+        display: block;
+        object-fit: cover;
+        object-position: 50% 56%;
+      }
+      section { padding: 72px 0; }
+      .section-head { display: flex; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 30px; }
+      .eyebrow { color: var(--clay); text-transform: uppercase; letter-spacing: 0.18em; font-weight: 900; font-size: 13px; margin: 0 0 10px; }
+      h2 { margin: 0; font-size: clamp(34px, 5vw, 52px); line-height: 1.02; font-weight: 700; }
+      .card {
+        border: 1px solid rgba(27, 23, 21, 0.1);
+        border-radius: 8px;
+        background: white;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(27, 23, 21, 0.06);
+      }
+      .card p, .muted { color: rgba(27, 23, 21, 0.7); line-height: 1.7; }
+      .review { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 34px; background: white; }
+      .rating { display: flex; gap: 18px; align-items: center; }
+      .score { width: 82px; height: 82px; border-radius: 50%; background: white; display: grid; place-items: center; font-size: 30px; font-weight: 900; box-shadow: 0 8px 30px rgba(27, 23, 21, 0.08); }
+      .stars { color: var(--saffron); letter-spacing: 2px; }
+      .trust { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+      .dark-band { background: var(--date); color: var(--cream); }
+      .visit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 34px; }
+      .mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 28px; }
+      .dark-card { border: 1px solid rgba(255, 247, 234, 0.16); border-radius: 8px; padding: 22px; }
+      .hours { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 10px; color: rgba(255, 247, 234, 0.76); font-size: 14px; }
+      .hours li { display: flex; justify-content: space-between; gap: 16px; }
+      form { background: var(--cream); color: var(--date); border-radius: 8px; padding: 28px; box-shadow: 0 22px 60px rgba(27, 23, 21, 0.16); }
+      input, textarea {
+        width: 100%;
+        border: 1px solid rgba(27, 23, 21, 0.15);
+        border-radius: 6px;
+        padding: 15px 16px;
+        font: inherit;
+        margin-top: 12px;
+      }
+      textarea { min-height: 112px; resize: vertical; }
+      .booking-label { display: block; margin-top: 16px; font-size: 14px; font-weight: 800; color: rgba(27, 23, 21, 0.7); }
+      .calendar-grid, .slot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+      .date-btn, .slot-btn {
+        border: 1px solid rgba(27, 23, 21, 0.12);
+        border-radius: 8px;
+        background: white;
+        color: var(--date);
+        padding: 12px 10px;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+      .date-btn[disabled], .slot-btn[disabled] { cursor: not-allowed; opacity: 0.35; background: rgba(27, 23, 21, 0.06); }
+      .date-btn.active { background: var(--mint); border-color: var(--mint); color: white; }
+      .slot-btn.active { background: var(--date); border-color: var(--date); color: var(--cream); }
+      .booking-note { margin: 12px 0 0; border-radius: 8px; background: rgba(30, 122, 104, 0.1); color: var(--mint); padding: 12px; font-size: 14px; font-weight: 800; }
+      .booking-error { margin: 12px 0 0; border-radius: 8px; background: #fff1f1; color: #a22323; padding: 12px; font-size: 14px; font-weight: 800; }
+      footer { padding: 42px 0; border-top: 1px solid rgba(27, 23, 21, 0.08); background: #f7efe1; color: rgba(27, 23, 21, 0.72); font-size: 14px; }
+      .footer-grid { display: grid; grid-template-columns: 1.2fr .9fr .9fr; gap: 32px; align-items: start; }
+      .footer-brand { display: flex; align-items: center; gap: 12px; font-family: Fraunces, Georgia, serif; font-size: 24px; font-weight: 800; color: var(--date); }
+      .footer-brand img { width: 40px; height: 40px; border-radius: 999px; object-fit: contain; background: white; border: 1px solid rgba(217,144,42,.25); padding: 5px; }
+      .footer-title { margin: 0 0 14px; font-size: 12px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; color: var(--clay); }
+      .footer-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
+      .footer-links a, footer a { color: rgba(27,23,21,.72); text-decoration: none; }
+      .footer-links a:hover, footer a:hover { color: var(--date); }
+      .socials { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+      .socials a { border-radius: 999px; background: white; padding: 8px 12px; font-size: 13px; font-weight: 800; box-shadow: 0 8px 18px rgba(27,23,21,.06); }
+      .staff-link { margin-left: auto; opacity: .45; font-size: 12px; }
+      @media (max-width: 860px) {
+        .links { display: none; }
+        .hero-grid, .review, .visit-grid { grid-template-columns: 1fr; }
+        .food { min-height: 360px; }
+        .trust { grid-template-columns: 1fr; }
+        .section-head { align-items: start; flex-direction: column; }
+        .mini-grid { grid-template-columns: 1fr; }
+        .footer-grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <a class="brand" href="/">
+          <img src="/brand/saba-logo.jpeg" alt="Saba Cafe logo" />
+          <span>Saba Cafe</span>
+        </a>
+        <div class="links">
+          <a href="#menu">Menu</a>
+          <a href="#reviews">Reviews</a>
+          <a href="#booking">Book</a>
+          <a href="#contact">Contact</a>
+        </div>
+        <a class="btn dark" href="#menu">Order Now</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="pattern"></div>
+        <div class="wrap hero-grid">
+          <div>
+            <span class="badge">Halal • Fresh • Family-owned • Authentic Somali food</span>
+            <h1 class="display">Authentic Somali food.</h1>
+            <p class="lead">A family-owned cafe rooted in Somali hospitality, where fresh halal food, spiced tea, and familiar flavours are served with the warmth of home on Old Kent Road.</p>
+            <div class="actions">
+              <a class="btn dark" href="#menu">Order Now</a>
+              <a class="btn light" href="#booking">Book a Table</a>
+              <a class="btn light" href="#menu">View Menu</a>
+            </div>
+            <div class="meta">
+              <strong>★ 5.0 Google rating</strong>
+              <span>152 Old Kent Rd, London SE1 5TY</span>
+              <span>ASAP pickup from just 15 mins</span>
+            </div>
+          </div>
+          <div class="food">
+            <img src="/brand/saba-food-hero.jpeg" alt="Somali food platter with rice, pasta, meat, vegetables and sauce" />
+          </div>
+        </div>
+      </section>
+
+      <section id="menu" class="wrap">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Featured dishes</p>
+            <h2 class="display">Official menu coming from Saba Cafe.</h2>
+          </div>
+          <a class="btn light" href="#booking">Check ordering</a>
+        </div>
+        <div class="card">
+          <h2 class="display">Menu not available yet</h2>
+          <p>The Saba Cafe team can add starters, breakfast, mains, sides, hot drinks, cold drinks, and sauces from the admin dashboard, then press Publish to make the menu live for customers.</p>
+          <div class="actions">
+            <a class="btn dark" href="#menu">View Menu</a>
+            <a class="btn light" href="tel:+442080509600">Call 020 8050 9600</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="reviews" class="review">
+        <div class="wrap" style="display: contents;">
+          <div class="wrap" style="max-width: 520px; margin-right: 0;">
+            <p class="eyebrow">Reviews</p>
+            <h2 class="display">Trust before the first bite.</h2>
+            <p class="muted">Saba Cafe is listed on Google as a cafe with a 5.0-star rating. Read the latest customer feedback directly on Google or leave a review after your visit.</p>
+            <a class="btn green" href="https://www.google.com/search?q=Saba+Cafe+Reviews">Leave us a Google Review</a>
+          </div>
+          <div class="wrap" style="max-width: 720px; margin-left: 0;">
+            <div class="card" style="background: var(--cream);">
+              <div class="rating">
+                <div class="score">5.0</div>
+                <div>
+                  <div class="stars">★★★★★</div>
+                  <strong>5.0 Google rating</strong>
+                  <p class="muted" style="margin: 6px 0 0;">Read the latest customer reviews directly on Google.</p>
+                </div>
+              </div>
+              <div class="actions">
+                <a class="btn dark" href="https://www.google.com/maps/search/?api=1&query=Saba%20Cafe%20152%20Old%20Kent%20Rd%20London%20SE1%205TY">Read on Google</a>
+                <a class="btn light" href="https://www.google.com/search?q=Saba+Cafe+Reviews">Leave a Review</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="wrap">
+        <div class="trust">
+          <div class="card"><h3 class="display">Halal kitchen</h3><p>Fresh halal food prepared with care for families, regulars, and first-time visitors.</p></div>
+          <div class="card"><h3 class="display">Fresh prep daily</h3><p>Warm Somali cooking, spiced tea, and generous portions from Old Kent Road.</p></div>
+          <div class="card"><h3 class="display">Family-owned</h3><p>A welcoming cafe experience shaped by Somali hospitality and community.</p></div>
+        </div>
+      </section>
+
+      <section id="booking" class="dark-band">
+        <div class="wrap visit-grid">
+          <div>
+            <p class="eyebrow" style="color: var(--saffron);">Visit Saba Cafe</p>
+            <h2 class="display">Pickup, delivery, tables, and catering.</h2>
+            <div class="mini-grid">
+              <div class="dark-card">
+                <h3>Opening hours</h3>
+                <p style="color: var(--saffron); font-weight: 800;">Open today until 10 pm</p>
+                <ul class="hours">
+                  <li><span>Monday</span><span>8:00 - 22:00</span></li>
+                  <li><span>Tuesday</span><span>8:00 - 22:00</span></li>
+                  <li><span>Wednesday</span><span>8:00 - 22:00</span></li>
+                  <li><span>Thursday</span><span>8:00 - 22:00</span></li>
+                  <li><span>Friday</span><span>8:00 - 22:00</span></li>
+                  <li><span>Saturday</span><span>9:00 - 22:00</span></li>
+                  <li><span>Sunday</span><span>9:00 - 22:00</span></li>
+                </ul>
+              </div>
+              <div id="contact" class="dark-card">
+                <h3>Location</h3>
+                <p>152 Old Kent Rd, London SE1 5TY</p>
+                <p>020 8050 9600</p>
+                <div class="actions">
+                  <a class="btn light" href="https://www.google.com/maps/dir/?api=1&destination=Saba%20Cafe%2C%20152%20Old%20Kent%20Rd%2C%20London%20SE1%205TY">Directions</a>
+                  <a class="btn" style="color: var(--cream); border-color: rgba(255,247,234,.24);" href="tel:+442080509600">Call</a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <form id="booking-form">
+            <h2 class="display">Book a table</h2>
+            <label class="booking-label">Party size
+              <select id="party-size" style="width: 100%; margin-top: 8px; border: 1px solid rgba(27,23,21,.15); border-radius: 6px; padding: 15px 16px; font: inherit;">
+                <option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option value="more">More</option>
+              </select>
+            </label>
+            <label id="custom-party-wrap" class="booking-label" hidden>Number of guests
+              <input id="custom-party-size" type="number" min="7" max="50" value="7" />
+            </label>
+            <label class="booking-label">Available booking dates</label>
+            <p id="slot-empty" class="booking-error">No online booking slots are available yet. Please call <a href="tel:+442080509600">020 8050 9600</a>.</p>
+            <div id="contact-step" hidden>
+              <input name="name" required placeholder="Name" />
+              <input name="phone" required placeholder="Phone" />
+              <input name="email" type="email" placeholder="Email optional" />
+              <textarea placeholder="Notes"></textarea>
+            </div>
+            <p id="booking-message" class="booking-note" hidden></p>
+            <a class="btn dark" style="width: 100%; margin-top: 14px;" href="tel:+442080509600">Call to book</a>
+          </form>
+        </div>
+      </section>
+
+    </main>
+
+    <footer>
+      <div class="wrap footer-grid">
+        <div>
+          <div class="footer-brand">
+            <img src="/brand/saba-logo.jpeg" alt="" />
+            <span>Saba Cafe</span>
+          </div>
+          <p class="muted" style="max-width: 420px;">Fresh, family-owned, authentic Somali food for pickup, delivery, catering, and cosy tables on Old Kent Road.</p>
+          <p style="color: rgba(27,23,21,.52);">© 2026 Saba Cafe. All rights reserved.</p>
+        </div>
+        <div>
+          <p class="footer-title">Contact</p>
+          <p>152 Old Kent Rd, London SE1 5TY</p>
+          <p><a href="mailto:hello@sabacafe.com">hello@sabacafe.com</a></p>
+          <p><a href="tel:+442080509600">020 8050 9600</a></p>
+          <p>Open today until 10 pm</p>
+        </div>
+        <div>
+          <p class="footer-title">Quick links</p>
+          <nav class="footer-links" aria-label="Footer navigation">
+            <a href="#menu">Menu</a>
+            <a href="#menu">Order</a>
+            <a href="#booking">Book</a>
+            <a href="#contact">Contact</a>
+          </nav>
+          <div class="socials">
+            <a href="https://www.instagram.com/">Instagram</a>
+            <a href="https://www.tiktok.com/">TikTok</a>
+            <a class="staff-link" href="/admin">Staff</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+    <script>
+      const partySize = document.querySelector("#party-size");
+      const customPartyWrap = document.querySelector("#custom-party-wrap");
+      const customPartySize = document.querySelector("#custom-party-size");
+      const bookingMessage = document.querySelector("#booking-message");
+      const bookingForm = document.querySelector("#booking-form");
+      function guestCount() {
+        return partySize.value === "more" ? customPartySize.value : partySize.value;
+      }
+      function updateGuestMessage() {
+        customPartyWrap.hidden = partySize.value !== "more";
+        bookingMessage.hidden = true;
+        bookingMessage.textContent = "";
+      }
+      partySize.addEventListener("change", updateGuestMessage);
+      customPartySize.addEventListener("input", updateGuestMessage);
+      bookingForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+      });
+    </script>
+  </body>
+</html>

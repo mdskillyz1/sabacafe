@@ -1,0 +1,7 @@
+{
+  "pickupEnabled": true,
+  "deliveryEnabled": true,
+  "deliveryRadiusMiles": 5,
+  "deliveryFeePerMilePence": 0,
+  "originPostcode": "SE1 5TY"
+}

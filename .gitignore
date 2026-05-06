@@ -1,0 +1,32 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds and caches
+.next/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# local environment
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Expo / React Native
+.expo/
+android/
+ios/
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/

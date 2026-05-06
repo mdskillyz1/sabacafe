@@ -1,0 +1,12 @@
+{
+  "businessName": "Saba Cafe",
+  "copyrightText": "© 2026 Saba Cafe. All rights reserved.",
+  "address": "152 Old Kent Rd, London SE1 5TY",
+  "email": "hello@sabacafe.com",
+  "phone": "020 8050 9600",
+  "openingHoursText": "Open today until 10 pm",
+  "socialLinks": {
+    "instagram": "https://www.instagram.com/",
+    "tiktok": "https://www.tiktok.com/"
+  }
+}

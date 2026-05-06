@@ -1,0 +1,14 @@
+{
+  "published": false,
+  "updatedAt": "2026-04-29T00:00:00.000Z",
+  "categories": [
+    { "id": "starters", "name": "Starters", "slug": "starters", "description": "Small plates to begin with, from sambusa to fresh bites.", "sortOrder": 1 },
+    { "id": "breakfast", "name": "Breakfast", "slug": "breakfast", "description": "Somali morning favourites, tea, and light plates.", "sortOrder": 2 },
+    { "id": "mains", "name": "Mains", "slug": "mains", "description": "Generous Somali classics, rice dishes, pasta, and grilled plates.", "sortOrder": 3 },
+    { "id": "sides", "name": "Sides", "slug": "sides", "description": "Banana, salad, chapati, and extras for the table.", "sortOrder": 4 },
+    { "id": "hot-drinks", "name": "Hot Drinks", "slug": "hot-drinks", "description": "Shaah, coffee, and spiced warm drinks.", "sortOrder": 5 },
+    { "id": "cold-drinks", "name": "Cold Drinks", "slug": "cold-drinks", "description": "Fresh juices, smoothies, water, and soft drinks.", "sortOrder": 6 },
+    { "id": "sauces", "name": "Sauces", "slug": "sauces", "description": "Basbaas, tamarind dip, and house sauces.", "sortOrder": 7 }
+  ],
+  "items": []
+}

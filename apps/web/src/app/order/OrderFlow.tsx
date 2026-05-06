@@ -1,0 +1,295 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { Bike, Clock, CreditCard, Heart, Minus, Plus, ShoppingBag, Store } from "lucide-react";
+import { MenuCard } from "@/components/MenuCard";
+import {
+  businessInfo,
+  calculatePrice,
+  menuCategories,
+  money,
+  validatePostcode,
+  type CartLine,
+  type FulfilmentType,
+  type MenuItem,
+  type OperationsSettings
+} from "@saba/shared";
+
+export function OrderFlow() {
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [fulfilmentType, setFulfilmentType] = useState<FulfilmentType>("PICKUP");
+  const [promoCode, setPromoCode] = useState("SABA10");
+  const [customerName, setCustomerName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [postcode, setPostcode] = useState("");
+  const [deliveryNotes, setDeliveryNotes] = useState("");
+  const [scheduledFor, setScheduledFor] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [items, setItems] = useState<MenuItem[]>([]);
+  const [menuPublished, setMenuPublished] = useState(false);
+  const [settings, setSettings] = useState<OperationsSettings>({
+    pickupEnabled: true,
+    deliveryEnabled: true,
+    deliveryRadiusMiles: 5,
+    deliveryFeePerMilePence: 0,
+    originPostcode: businessInfo.deliveryOriginPostcode
+  });
+  const [deliveryQuote, setDeliveryQuote] = useState<{ allowed: boolean; deliveryFeePence?: number; distanceMiles?: number; reason?: string } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/menu", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((menu) => {
+        setItems(menu.items ?? []);
+        setMenuPublished(Boolean(menu.published));
+      });
+    fetch("/api/settings", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => {
+        setSettings(data);
+        if (!data.pickupEnabled && data.deliveryEnabled) setFulfilmentType("DELIVERY");
+      });
+  }, []);
+
+  useEffect(() => {
+    if (fulfilmentType !== "DELIVERY" || !validatePostcode(postcode)) {
+      setDeliveryQuote(null);
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      fetch("/api/delivery/quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postcode })
+      })
+        .then(async (response) => {
+          const data = await response.json();
+          setDeliveryQuote(response.ok ? data : { ...data, allowed: false });
+        })
+        .catch(() => setDeliveryQuote({ allowed: false, reason: "Delivery validation is temporarily unavailable." }));
+    }, 350);
+    return () => window.clearTimeout(timeout);
+  }, [fulfilmentType, postcode]);
+
+  const deliveryFeePence = fulfilmentType === "DELIVERY" && deliveryQuote?.allowed ? deliveryQuote.deliveryFeePence ?? 0 : 0;
+  const totals = useMemo(
+    () => calculatePrice(cart, items, fulfilmentType, promoCode, 0.2, 1200, deliveryFeePence),
+    [cart, fulfilmentType, promoCode, items, deliveryFeePence]
+  );
+
+  function addItem(item: MenuItem) {
+    setCart((current) => {
+      const existing = current.find((line) => line.menuItemId === item.id && !line.optionIds.length && !line.addOnIds.length);
+      if (existing) {
+        return current.map((line) => (line === existing ? { ...line, quantity: line.quantity + 1 } : line));
+      }
+      return [
+        ...current,
+        {
+          menuItemId: item.id,
+          name: item.name,
+          unitPricePence: item.pricePence,
+          quantity: 1,
+          optionIds: [],
+          addOnIds: [],
+          notes: ""
+        }
+      ];
+    });
+  }
+
+  function changeQuantity(menuItemId: string, delta: number) {
+    setCart((current) =>
+      current
+        .map((line) => (line.menuItemId === menuItemId ? { ...line, quantity: Math.max(0, line.quantity + delta) } : line))
+        .filter((line) => line.quantity > 0)
+    );
+  }
+
+  async function submitOrder() {
+    setError("");
+    if (!cart.length) return setError("Add at least one dish to continue.");
+    if (fulfilmentType === "PICKUP" && !settings.pickupEnabled) return setError("Pickup is currently switched off.");
+    if (fulfilmentType === "DELIVERY" && !settings.deliveryEnabled) return setError("Delivery is currently switched off.");
+    if (!totals.minimumMet) return setError("Minimum order is £12.00 before discounts.");
+    if (!customerName || !email || !phone) return setError("Please add your name, email, and phone.");
+    if (fulfilmentType === "DELIVERY" && (!addressLine1 || !validatePostcode(postcode))) {
+      return setError("Enter a valid delivery address and postcode.");
+    }
+    if (fulfilmentType === "DELIVERY" && (!deliveryQuote || !deliveryQuote.allowed)) {
+      return setError(deliveryQuote?.reason ?? "Please enter a delivery postcode inside our delivery radius.");
+    }
+    setLoading(true);
+    const orderResponse = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ customerName, email, phone, fulfilmentType, addressLine1, postcode, deliveryNotes, scheduledFor, promoCode, items: cart })
+    });
+    const order = await orderResponse.json();
+    if (!orderResponse.ok) {
+      setLoading(false);
+      return setError(order.error ?? "Order could not be created.");
+    }
+    const checkoutResponse = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId: order.id })
+    });
+    const checkout = await checkoutResponse.json();
+    setLoading(false);
+    if (!checkoutResponse.ok) return setError(checkout.error ?? "Payment could not be started.");
+    window.location.href = `/order-confirmation?order=${order.id}&payment=${checkout.mode}`;
+  }
+
+  return (
+    <main className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_390px] lg:px-8">
+      <section>
+        <div className="rounded-lg bg-date p-6 text-cream">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-saffron">Online ordering</p>
+          <h1 className="mt-2 font-display text-4xl font-semibold">Menu → cart → pickup/delivery → payment → confirmation.</h1>
+          <p className="mt-3 text-cream/75">
+            Order from {businessInfo.formattedAddress}. Stripe-ready checkout, live admin status updates, persistent accounts ready, and reorder/favourites hooks in place.
+          </p>
+        </div>
+        {!menuPublished || !items.length ? (
+          <div className="mt-8 rounded-lg border border-date/10 bg-white p-8 text-center shadow-sm">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-clay">Ordering not available</p>
+            <h2 className="mt-2 font-display text-4xl font-semibold text-date">The online menu has not been published yet.</h2>
+            <p className="mx-auto mt-4 max-w-2xl leading-7 text-date/70">
+              Please call {businessInfo.phone} or visit {businessInfo.formattedAddress}. Once Saba Cafe publishes its menu
+              from admin, online ordering will appear here automatically.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-8 space-y-10">
+            {menuCategories.map((category) => {
+            const categoryItems = items.filter((item) => item.categoryId === category.id);
+            if (!categoryItems.length) return null;
+            return (
+              <section key={category.id}>
+                <h2 className="font-display text-3xl font-semibold text-date">{category.name}</h2>
+                <div className="mt-4 grid gap-5">
+                  {categoryItems.map((item) => (
+                    <MenuCard key={item.id} item={item} onAdd={addItem} />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+          </div>
+        )}
+      </section>
+
+      <aside className="h-fit rounded-lg border border-date/10 bg-white p-5 shadow-soft lg:sticky lg:top-24">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-3xl font-semibold text-date">Your order</h2>
+          <ShoppingBag className="text-clay" />
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setFulfilmentType("PICKUP")}
+            disabled={!settings.pickupEnabled}
+            className={`focus-ring rounded-md border px-3 py-3 text-sm font-semibold ${fulfilmentType === "PICKUP" ? "border-date bg-date text-cream" : "border-date/15"}`}
+          >
+            <Store className="mx-auto mb-1" size={18} /> Pickup
+          </button>
+          <button
+            type="button"
+            onClick={() => setFulfilmentType("DELIVERY")}
+            disabled={!settings.deliveryEnabled}
+            className={`focus-ring rounded-md border px-3 py-3 text-sm font-semibold ${fulfilmentType === "DELIVERY" ? "border-date bg-date text-cream" : "border-date/15"}`}
+          >
+            <Bike className="mx-auto mb-1" size={18} /> Delivery
+          </button>
+        </div>
+        <p className="mt-3 rounded-md bg-cream p-3 text-xs leading-5 text-date/65">
+          Delivery is available within {settings.deliveryRadiusMiles} miles of {businessInfo.formattedAddress}.
+          {settings.deliveryFeePerMilePence > 0 ? ` Fee: ${money(settings.deliveryFeePerMilePence)} per mile.` : " Delivery fee is set by staff."}
+        </p>
+
+        <div className="mt-5 space-y-3">
+          {cart.length ? (
+            cart.map((line) => (
+              <div key={line.menuItemId} className="rounded-md bg-cream p-3">
+                <div className="flex justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-date">{line.name}</p>
+                    <p className="text-sm text-date/60">{money(line.unitPricePence)} each</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button className="focus-ring rounded-full border border-date/15 p-1" onClick={() => changeQuantity(line.menuItemId, -1)} type="button">
+                      <Minus size={14} />
+                    </button>
+                    <span className="w-5 text-center text-sm font-semibold">{line.quantity}</span>
+                    <button className="focus-ring rounded-full border border-date/15 p-1" onClick={() => changeQuantity(line.menuItemId, 1)} type="button">
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                </div>
+                <input
+                  aria-label={`Notes for ${line.name}`}
+                  placeholder="Notes for kitchen"
+                  className="focus-ring mt-3 w-full rounded-md border border-date/10 px-3 py-2 text-sm"
+                  onChange={(event) =>
+                    setCart((current) => current.map((candidate) => (candidate.menuItemId === line.menuItemId ? { ...candidate, notes: event.target.value } : candidate)))
+                  }
+                />
+              </div>
+            ))
+          ) : (
+            <p className="rounded-md bg-cream p-4 text-sm text-date/65">Add a dish to start. Favourites and reorder buttons connect to customer accounts.</p>
+          )}
+        </div>
+
+        <div className="mt-5 grid gap-3">
+          <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Name" value={customerName} onChange={(event) => setCustomerName(event.target.value)} />
+          <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Email" value={email} onChange={(event) => setEmail(event.target.value)} />
+          <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Phone" value={phone} onChange={(event) => setPhone(event.target.value)} />
+          {fulfilmentType === "DELIVERY" ? (
+            <>
+              <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Delivery address" value={addressLine1} onChange={(event) => setAddressLine1(event.target.value)} />
+              <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Postcode" value={postcode} onChange={(event) => setPostcode(event.target.value)} />
+              {postcode ? (
+                <p className={`rounded-md p-3 text-sm ${deliveryQuote?.allowed ? "bg-mint/10 text-mint" : "bg-red-50 text-red-700"}`}>
+                  {deliveryQuote?.allowed
+                    ? `Delivery approved: ${deliveryQuote.distanceMiles} miles away. Fee ${money(deliveryQuote.deliveryFeePence ?? 0)}.`
+                    : deliveryQuote?.reason ?? `Delivery must be within ${settings.deliveryRadiusMiles} miles.`}
+                </p>
+              ) : null}
+              <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Delivery notes" value={deliveryNotes} onChange={(event) => setDeliveryNotes(event.target.value)} />
+            </>
+          ) : null}
+          <label className="text-sm font-semibold text-date/70">
+            <Clock className="mr-1 inline" size={15} /> ASAP or scheduled time
+            <input className="focus-ring mt-1 w-full rounded-md border border-date/15 px-4 py-3 font-normal" type="datetime-local" value={scheduledFor} onChange={(event) => setScheduledFor(event.target.value)} />
+          </label>
+          <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Promo code" value={promoCode} onChange={(event) => setPromoCode(event.target.value)} />
+        </div>
+
+        <div className="mt-5 space-y-2 border-t border-date/10 pt-5 text-sm">
+          <div className="flex justify-between"><span>Subtotal</span><span>{money(totals.subtotalPence)}</span></div>
+          <div className="flex justify-between"><span>Discount</span><span>-{money(totals.discountPence)}</span></div>
+          <div className="flex justify-between"><span>Delivery</span><span>{money(totals.deliveryFeePence)}</span></div>
+          <div className="flex justify-between"><span>VAT included</span><span>{money(totals.vatPence)}</span></div>
+          <div className="flex justify-between text-lg font-semibold text-date"><span>Total</span><span>{money(totals.totalPence)}</span></div>
+        </div>
+        {error ? <p className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
+        <button
+          type="button"
+          onClick={submitOrder}
+          disabled={loading}
+          className="focus-ring mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-mint px-5 py-4 font-semibold text-white disabled:opacity-60"
+        >
+          <CreditCard size={18} /> {loading ? "Preparing checkout..." : "Pay securely"}
+        </button>
+        <button type="button" className="focus-ring mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-date/15 px-5 py-3 font-semibold text-date">
+          <Heart size={17} /> Save as favourite
+        </button>
+      </aside>
+    </main>
+  );
+}
