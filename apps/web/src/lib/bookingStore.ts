@@ -1,5 +1,6 @@
-import { promises as fs } from "node:fs";
+import { constants as fsConstants, promises as fs } from "node:fs";
 import path from "node:path";
+import bundledBookingStore from "../../data/booking-store.json";
 import type {
   Booking,
   BookingSlot,
@@ -9,7 +10,12 @@ import type {
   RestaurantTable
 } from "@saba/shared";
 
-const storePath = path.join(process.cwd(), "data", "booking-store.json");
+const storeFileName = "booking-store.json";
+const candidateStorePaths = [
+  path.join(process.cwd(), "data", storeFileName),
+  path.join(process.cwd(), "apps", "web", "data", storeFileName),
+  path.join("/tmp", "saba-cafe", storeFileName)
+];
 const bookingBlocks = new Set<BookingStatus>(["PENDING", "CONFIRMED", "SEATED"]);
 let writeQueue = Promise.resolve();
 
@@ -31,13 +37,28 @@ const defaultStore = (): BookingStore => ({
   managerEmail: ""
 });
 
-async function ensureStore() {
-  try {
-    await fs.access(storePath);
-  } catch {
-    await fs.mkdir(path.dirname(storePath), { recursive: true });
-    await fs.writeFile(storePath, `${JSON.stringify(defaultStore(), null, 2)}\n`);
+async function readFirstAvailableStore() {
+  for (const storePath of candidateStorePaths) {
+    try {
+      return await fs.readFile(storePath, "utf8");
+    } catch {
+      // Fall through to bundled defaults so booking widgets never crash production.
+    }
   }
+  return JSON.stringify(bundledBookingStore);
+}
+
+async function writableStorePath() {
+  for (const storePath of candidateStorePaths) {
+    try {
+      await fs.mkdir(path.dirname(storePath), { recursive: true });
+      await fs.access(path.dirname(storePath), fsConstants.W_OK);
+      return storePath;
+    } catch {
+      // Try the next candidate, ending with /tmp.
+    }
+  }
+  return candidateStorePaths[candidateStorePaths.length - 1];
 }
 
 const pad = (value: number) => String(value).padStart(2, "0");
@@ -75,25 +96,32 @@ function sortTables(tables: RestaurantTable[]) {
 }
 
 export async function readBookingStore(): Promise<BookingStore> {
-  await ensureStore();
-  const raw = await fs.readFile(storePath, "utf8");
-  const parsed = JSON.parse(raw) as Partial<BookingStore>;
-  return {
-    ...defaultStore(),
-    ...parsed,
-    tables: parsed.tables ?? defaultStore().tables,
-    availability: parsed.availability ?? defaultAvailability,
-    blockedDates: parsed.blockedDates ?? [],
-    blockedTimeSlots: parsed.blockedTimeSlots ?? [],
-    specialOpeningHours: parsed.specialOpeningHours ?? [],
-    bookings: parsed.bookings ?? [],
-    managerEmail: parsed.managerEmail ?? ""
-  };
+  try {
+    const raw = await readFirstAvailableStore();
+    const parsed = JSON.parse(raw) as Partial<BookingStore>;
+    return {
+      ...defaultStore(),
+      ...parsed,
+      tables: parsed.tables ?? defaultStore().tables,
+      availability: parsed.availability ?? defaultAvailability,
+      blockedDates: parsed.blockedDates ?? [],
+      blockedTimeSlots: parsed.blockedTimeSlots ?? [],
+      specialOpeningHours: parsed.specialOpeningHours ?? [],
+      bookings: parsed.bookings ?? [],
+      managerEmail: parsed.managerEmail ?? ""
+    };
+  } catch {
+    return defaultStore();
+  }
 }
 
 export async function writeBookingStore(store: BookingStore) {
   const next = { ...store, updatedAt: new Date().toISOString() };
-  writeQueue = writeQueue.then(() => fs.writeFile(storePath, `${JSON.stringify(next, null, 2)}\n`));
+  writeQueue = writeQueue.then(async () => {
+    const storePath = await writableStorePath();
+    await fs.mkdir(path.dirname(storePath), { recursive: true });
+    await fs.writeFile(storePath, `${JSON.stringify(next, null, 2)}\n`);
+  });
   await writeQueue;
   return next;
 }

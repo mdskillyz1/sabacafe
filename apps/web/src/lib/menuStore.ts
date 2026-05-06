@@ -1,6 +1,7 @@
-import { promises as fs } from "fs";
+import { constants as fsConstants, promises as fs } from "fs";
 import path from "path";
 import { menuCategories, type MenuCategory, type MenuItem } from "@saba/shared";
+import bundledMenuStore from "../../data/menu-store.json";
 
 export type MenuStore = {
   published: boolean;
@@ -9,7 +10,12 @@ export type MenuStore = {
   items: MenuItem[];
 };
 
-const storePath = path.join(process.cwd(), "data", "menu-store.json");
+const storeFileName = "menu-store.json";
+const candidateStorePaths = [
+  path.join(process.cwd(), "data", storeFileName),
+  path.join(process.cwd(), "apps", "web", "data", storeFileName),
+  path.join("/tmp", "saba-cafe", storeFileName)
+];
 
 const emptyStore = (): MenuStore => ({
   published: false,
@@ -18,28 +24,47 @@ const emptyStore = (): MenuStore => ({
   items: []
 });
 
-async function ensureStore() {
-  try {
-    await fs.access(storePath);
-  } catch {
-    await fs.mkdir(path.dirname(storePath), { recursive: true });
-    await fs.writeFile(storePath, JSON.stringify(emptyStore(), null, 2));
+async function readFirstAvailableStore() {
+  for (const storePath of candidateStorePaths) {
+    try {
+      return await fs.readFile(storePath, "utf8");
+    } catch {
+      // Keep public menu pages safe on read-only serverless hosts.
+    }
   }
+  return JSON.stringify(bundledMenuStore);
+}
+
+async function writableStorePath() {
+  for (const storePath of candidateStorePaths) {
+    try {
+      await fs.mkdir(path.dirname(storePath), { recursive: true });
+      await fs.access(path.dirname(storePath), fsConstants.W_OK);
+      return storePath;
+    } catch {
+      // Try the next candidate.
+    }
+  }
+  return candidateStorePaths[candidateStorePaths.length - 1];
 }
 
 export async function readMenuStore(): Promise<MenuStore> {
-  await ensureStore();
-  const raw = await fs.readFile(storePath, "utf8");
-  const parsed = JSON.parse(raw) as Partial<MenuStore>;
-  return {
-    published: Boolean(parsed.published),
-    updatedAt: parsed.updatedAt ?? new Date().toISOString(),
-    categories: parsed.categories?.length ? parsed.categories : menuCategories,
-    items: parsed.items ?? []
-  };
+  try {
+    const raw = await readFirstAvailableStore();
+    const parsed = JSON.parse(raw) as Partial<MenuStore>;
+    return {
+      published: Boolean(parsed.published),
+      updatedAt: parsed.updatedAt ?? new Date().toISOString(),
+      categories: parsed.categories?.length ? parsed.categories : menuCategories,
+      items: parsed.items ?? []
+    };
+  } catch {
+    return emptyStore();
+  }
 }
 
 export async function writeMenuStore(store: MenuStore) {
+  const storePath = await writableStorePath();
   await fs.mkdir(path.dirname(storePath), { recursive: true });
   const cleanStore: MenuStore = {
     ...store,

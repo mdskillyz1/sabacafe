@@ -62,7 +62,7 @@ python3 -m http.server 3000 --bind 127.0.0.1 --directory static-preview
 
 ```txt
 DATABASE_URL                 PostgreSQL connection string
-NEXT_PUBLIC_SITE_URL          Public web URL
+NEXT_PUBLIC_SITE_URL          Public web URL, for example https://sabacafe-web.vercel.app
 GOOGLE_PLACE_ID               Google Place ID for Saba Cafe
 GOOGLE_REVIEW_URL             Google Business Profile review URL
 GOOGLE_PLACES_API_KEY         Google Places API key for approved review fetches
@@ -71,6 +71,15 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 STRIPE_WEBHOOK_SECRET         Stripe webhook signing secret
 VAT_RATE                      Default 0.20
 MINIMUM_ORDER_PENCE           Default 1200
+```
+
+For Vercel, `NEXT_PUBLIC_SITE_URL` is recommended for correct social preview URLs, but the app also falls back to Vercel's `VERCEL_URL` so the homepage can render without it. Stripe, Google, and database variables are optional for the temporary demo path; missing values fall back to demo checkout, manual Google review links, and bundled/default website settings.
+
+Admin login variables:
+
+```txt
+ADMIN_SEED_PASSWORD           Staff password for /admin
+ADMIN_SESSION_TOKEN           Long random cookie secret; falls back to ADMIN_SEED_PASSWORD in demos
 ```
 
 ## Stripe Setup

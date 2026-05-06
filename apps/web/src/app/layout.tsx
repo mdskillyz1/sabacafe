@@ -6,8 +6,12 @@ import { Footer } from "./Footer";
 import { readBusinessInfo } from "@/lib/businessInfoStore";
 import "./globals.css";
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(siteUrl),
   title: "Saba Cafe | Modern Somali Restaurant",
   description:
     "Order authentic Somali food from Saba Cafe at 152 Old Kent Rd, London SE1 5TY. Halal rice dishes, suqaar, sambusa, shaah, catering, pickup and delivery.",
@@ -22,7 +26,6 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const footerInfo = await readBusinessInfo();
   const schema = {
     "@context": "https://schema.org",

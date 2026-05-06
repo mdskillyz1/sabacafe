@@ -1,8 +1,14 @@
-import { promises as fs } from "fs";
+import { constants as fsConstants, promises as fs } from "fs";
 import path from "path";
 import { defaultBusinessInfoSettings, type BusinessInfoSettings } from "@saba/shared";
+import bundledBusinessInfo from "../../data/business-info.json";
 
-const storePath = path.join(process.cwd(), "data", "business-info.json");
+const storeFileName = "business-info.json";
+const candidateStorePaths = [
+  path.join(process.cwd(), "data", storeFileName),
+  path.join(process.cwd(), "apps", "web", "data", storeFileName),
+  path.join("/tmp", "saba-cafe", storeFileName)
+];
 
 function cleanString(value: unknown, fallback: string) {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
@@ -59,19 +65,37 @@ export function normalizeBusinessInfo(input: Partial<BusinessInfoSettings>): Bus
   };
 }
 
-async function ensureStore() {
-  try {
-    await fs.access(storePath);
-  } catch {
-    await fs.mkdir(path.dirname(storePath), { recursive: true });
-    await fs.writeFile(storePath, JSON.stringify(defaultBusinessInfoSettings, null, 2));
+async function readFirstAvailableStore() {
+  for (const storePath of candidateStorePaths) {
+    try {
+      return await fs.readFile(storePath, "utf8");
+    } catch {
+      // Vercel serverless paths can be read-only or absent. The homepage must still render.
+    }
   }
+  return JSON.stringify(bundledBusinessInfo);
+}
+
+async function writableStorePath() {
+  for (const storePath of candidateStorePaths) {
+    try {
+      await fs.mkdir(path.dirname(storePath), { recursive: true });
+      await fs.access(path.dirname(storePath), fsConstants.W_OK);
+      return storePath;
+    } catch {
+      // Try the next candidate, ending with /tmp for serverless-safe demo writes.
+    }
+  }
+  return candidateStorePaths[candidateStorePaths.length - 1];
 }
 
 export async function readBusinessInfo(): Promise<BusinessInfoSettings> {
-  await ensureStore();
-  const raw = await fs.readFile(storePath, "utf8");
-  return normalizeBusinessInfo(JSON.parse(raw) as Partial<BusinessInfoSettings>);
+  try {
+    const raw = await readFirstAvailableStore();
+    return normalizeBusinessInfo(JSON.parse(raw) as Partial<BusinessInfoSettings>);
+  } catch {
+    return normalizeBusinessInfo(defaultBusinessInfoSettings);
+  }
 }
 
 export async function writeBusinessInfo(input: BusinessInfoSettings) {
@@ -88,6 +112,7 @@ export async function writeBusinessInfo(input: BusinessInfoSettings) {
     return { ok: false as const, errors, data: candidate };
   }
   const normalized = normalizeBusinessInfo(candidate);
+  const storePath = await writableStorePath();
   await fs.mkdir(path.dirname(storePath), { recursive: true });
   await fs.writeFile(storePath, JSON.stringify(normalized, null, 2));
   return { ok: true as const, data: normalized };
