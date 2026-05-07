@@ -18,10 +18,10 @@ export default function HomePage() {
     <main>
       <section className="relative overflow-hidden bg-cream">
         <div className="absolute inset-0 somali-pattern opacity-35" />
-        <div className="relative mx-auto grid min-h-[calc(100vh-72px)] max-w-7xl items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_0.92fr] lg:px-8">
+        <div className="relative mx-auto grid min-h-[calc(100svh-116px)] max-w-7xl items-center gap-10 px-4 py-10 sm:px-6 lg:min-h-[calc(100vh-72px)] lg:grid-cols-[1fr_0.92fr] lg:px-8">
           <div className="max-w-3xl">
             <Badge tone="green">Halal • Fresh • Family-owned • Authentic Somali food</Badge>
-            <h1 className="mt-6 font-display text-5xl font-semibold leading-tight text-date sm:text-6xl lg:text-7xl">
+            <h1 className="mt-6 font-display text-4xl font-semibold leading-tight text-date sm:text-6xl lg:text-7xl">
               Authentic Somali food.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-date/72">
@@ -29,13 +29,13 @@ export default function HomePage() {
               served with the warmth of home on Old Kent Road.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link className="focus-ring rounded-full bg-date px-6 py-4 text-center font-semibold text-cream shadow-soft" href="/order">
+              <Link className="focus-ring rounded-full bg-date px-5 py-3 text-center text-sm font-semibold text-cream shadow-soft sm:px-6 sm:py-4 sm:text-base" href="/order">
                 Order Now
               </Link>
-              <Link className="focus-ring rounded-full border border-date/20 bg-white px-6 py-4 text-center font-semibold text-date" href="/#booking">
+              <Link className="focus-ring rounded-full border border-date/20 bg-white px-5 py-3 text-center text-sm font-semibold text-date sm:px-6 sm:py-4 sm:text-base" href="/#booking">
                 Book a Table
               </Link>
-              <Link className="focus-ring rounded-full border border-date/20 bg-white px-6 py-4 text-center font-semibold text-date" href="/menu">
+              <Link className="focus-ring rounded-full border border-date/20 bg-white px-5 py-3 text-center text-sm font-semibold text-date sm:px-6 sm:py-4 sm:text-base" href="/menu">
                 View Menu
               </Link>
             </div>
@@ -47,7 +47,7 @@ export default function HomePage() {
               <span>ASAP pickup from just 15 mins</span>
             </div>
           </div>
-          <div className="relative min-h-[520px] overflow-hidden rounded-lg bg-date shadow-soft">
+          <div className="relative min-h-[320px] overflow-hidden rounded-lg bg-date shadow-soft sm:min-h-[420px] lg:min-h-[520px]">
             <Image
               src="/brand/saba-food-hero.jpeg"
               alt="Somali food platter with rice, pasta, meat, vegetables and sauce"

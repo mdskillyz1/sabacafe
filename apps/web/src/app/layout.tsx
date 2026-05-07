@@ -64,17 +64,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="font-sans antialiased">
         <WebsiteEventTracker />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
-        <header className="sticky top-0 z-50 border-b border-date/10 bg-cream/92 backdrop-blur">
-          <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-            <Link href="/" className="focus-ring flex items-center gap-3 rounded-full pr-2">
-              <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-saffron/25 bg-white shadow-sm">
+        <header className="sticky top-0 z-50 border-b border-date/10 bg-cream/95 backdrop-blur">
+          <nav className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+            <Link href="/" className="focus-ring flex min-w-0 items-center gap-3 rounded-full pr-2">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-saffron/25 bg-white shadow-sm sm:h-11 sm:w-11">
                 <img
                   src="/brand/saba-logo.jpeg"
                   alt="Saba Cafe logo"
                   className="h-full w-full object-contain p-1.5"
                 />
               </span>
-              <span className="font-display text-2xl font-semibold tracking-normal text-date">Saba Cafe</span>
+              <span className="truncate font-display text-xl font-semibold tracking-normal text-date sm:text-2xl">Saba Cafe</span>
             </Link>
             <div className="hidden items-center gap-6 text-sm font-medium text-date/75 md:flex">
               <Link href="/menu">Menu</Link>
@@ -84,20 +84,40 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </div>
             <Link
               href="/order"
-              className="focus-ring inline-flex items-center gap-2 rounded-full bg-date px-4 py-2 text-sm font-semibold text-cream shadow-soft"
+              className="focus-ring inline-flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-date px-3 py-2 text-sm font-semibold text-cream shadow-soft sm:px-4"
             >
-              <ShoppingBag size={17} /> Order Now
+              <ShoppingBag size={16} className="shrink-0" />
+              <span>Order<span className="hidden sm:inline"> Now</span></span>
             </Link>
           </nav>
+          <div className="border-t border-date/10 md:hidden">
+            <nav aria-label="Mobile navigation" className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-2 text-sm font-semibold text-date/75">
+              {[
+                ["Menu", "/menu"],
+                ["Order", "/order"],
+                ["Reviews", "/#reviews"],
+                ["Book", "/#booking"],
+                ["Contact", "/contact"]
+              ].map(([label, href]) => (
+                <Link
+                  key={label}
+                  href={href}
+                  className="focus-ring flex min-h-11 shrink-0 items-center rounded-full border border-date/10 bg-white px-4 transition hover:border-date/25 hover:text-date"
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          </div>
         </header>
         {children}
         <Footer />
         <CookieConsentBanner text={footerInfo.cookieBannerText} />
         <Link
           href="/order"
-          className="focus-ring fixed bottom-4 left-4 right-4 z-50 flex items-center justify-center gap-2 rounded-full bg-mint px-5 py-4 font-semibold text-white shadow-soft md:hidden"
+          className="focus-ring fixed bottom-3 left-1/2 z-40 flex min-h-11 max-w-[calc(100%-2rem)] -translate-x-1/2 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-mint px-5 py-3 text-sm font-semibold text-white shadow-soft md:hidden"
         >
-          <ShoppingBag size={18} /> Order Saba Cafe
+          <ShoppingBag size={17} className="shrink-0" /> Order Now
         </Link>
       </body>
     </html>

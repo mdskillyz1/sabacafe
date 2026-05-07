@@ -7,7 +7,7 @@ export async function Footer() {
   const info = await readBusinessInfo();
 
   return (
-    <footer className="border-t border-date/10 bg-[#f7efe1] px-4 py-10 text-date sm:px-6 lg:px-8">
+    <footer className="border-t border-date/10 bg-[#f7efe1] px-4 pb-24 pt-10 text-date sm:px-6 md:pb-10 lg:px-8">
       <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.15fr_0.85fr_0.85fr_1fr]">
         <div>
           <div className="flex items-center gap-3">
