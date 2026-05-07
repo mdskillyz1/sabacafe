@@ -75,11 +75,23 @@ MINIMUM_ORDER_PENCE           Default 1200
 
 For Vercel, `NEXT_PUBLIC_SITE_URL` is recommended for correct social preview URLs, but the app also falls back to Vercel's `VERCEL_URL` so the homepage can render without it. Stripe, Google, and database variables are optional for the temporary demo path; missing values fall back to demo checkout, manual Google review links, and bundled/default website settings.
 
-Admin login variables:
+Admin login:
+
+Development admin account:
 
 ```txt
-ADMIN_SEED_PASSWORD           Staff password for /admin
-ADMIN_SESSION_TOKEN           Long random cookie secret; falls back to ADMIN_SEED_PASSWORD in demos
+Username: admin
+Password: admin123
+```
+
+Change this before production by logging into `/admin/users`, creating a new Super Admin, then disabling or deleting the development account.
+
+Admin authentication uses usernames, secure password hashes, signed HTTP-only session cookies, and basic login rate limiting. Super Admins can manage admin users from `/admin/users`.
+
+Admin session variable:
+
+```txt
+ADMIN_SESSION_TOKEN           Long random cookie secret for signed admin sessions
 ```
 
 ## Stripe Setup
@@ -122,8 +134,7 @@ Never create fake reviews. Demo placeholders in this project are labelled as pla
    - Build command: `pnpm --filter @saba/web build`
    - Publish directory: `apps/web/.next`
 5. Add environment variables:
-   - `ADMIN_SEED_PASSWORD`: a private staff password
-   - `ADMIN_SESSION_TOKEN`: a long random secret
+   - `ADMIN_SESSION_TOKEN`: a long random secret for admin sessions
    - `NEXT_PUBLIC_SITE_URL`: the Netlify URL
    - `GOOGLE_REVIEW_URL`: Saba Cafe Google review URL
    - `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_URL`: Saba Cafe Google map embed URL

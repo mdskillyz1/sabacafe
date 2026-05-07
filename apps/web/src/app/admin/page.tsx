@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { BarChart3, CalendarDays, Clock, Gift, MessageSquare, Settings, ShoppingBag, Truck, Users, Utensils, Wrench } from "lucide-react";
+import { BarChart3, CalendarDays, Clock, Gift, MessageSquare, ShieldCheck, ShoppingBag, Truck, Users, Utensils, Wrench } from "lucide-react";
 import { AdminLogoutButton } from "./AdminLogoutButton";
 
 const tools: [string, string, LucideIcon, string][] = [
@@ -13,7 +13,8 @@ const tools: [string, string, LucideIcon, string][] = [
   ["Delivery settings", "Turn pickup/delivery on or off, set delivery radius, and set per-mile fees.", Truck, "/admin/settings"],
   ["Promo codes", "Create discounts, first-order offers, and campaign codes.", Gift, "/admin/promo-codes"],
   ["Customers", "View customers, order history, bookings, and review activity.", Users, "/admin/customers"],
-  ["Website settings", "Manage homepage content, Google settings, contact details, and publishing.", Wrench, "/admin/website-settings"]
+  ["Website settings", "Manage homepage content, Google settings, contact details, and publishing.", Wrench, "/admin/website-settings"],
+  ["Admin users", "Create staff accounts, reset passwords, disable access, and assign roles.", ShieldCheck, "/admin/users"]
 ];
 
 export default function AdminPage() {

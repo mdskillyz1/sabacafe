@@ -2,9 +2,25 @@ import { PrismaClient } from "@prisma/client";
 import { businessInfo, defaultBusinessInfoSettings, menuCategories, menuItems, openingHours } from "@saba/shared";
 
 const prisma = new PrismaClient();
+const db = prisma as any;
 
 async function main() {
-  await prisma.appSettings.upsert({
+  await db.adminUser.upsert({
+    where: { username: "admin" },
+    update: {
+      role: "SUPER_ADMIN",
+      isActive: true
+    },
+    create: {
+      username: "admin",
+      passwordHash:
+        "scrypt$pvw3HbhBXpkUHB9AQtnKLQ$KFOK0P0Em_8hPHhkCn9LDzIGhKsDoglCV7fgiD6LQ8T_dxnCt3JDKGQ93sXjdjfUl8anu40z9mmA13JOKM74NQ",
+      role: "SUPER_ADMIN",
+      isActive: true
+    }
+  });
+
+  await db.appSettings.upsert({
     where: { id: "global" },
     update: {},
     create: {
