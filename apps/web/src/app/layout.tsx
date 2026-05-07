@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import { businessInfo, openingHours } from "@saba/shared";
 import { Footer } from "./Footer";
+import { WebsiteEventTracker } from "./WebsiteEventTracker";
 import { readBusinessInfo } from "@/lib/businessInfoStore";
 import "./globals.css";
 
@@ -60,6 +61,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <body className="font-sans antialiased">
+        <WebsiteEventTracker />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
         <header className="sticky top-0 z-50 border-b border-date/10 bg-cream/92 backdrop-blur">
           <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">

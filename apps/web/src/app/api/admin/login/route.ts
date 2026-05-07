@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authenticateAdmin } from "@/lib/adminUsers";
 import { adminCookieName, createAdminSessionCookie } from "@/lib/adminSession";
+import { logAdminActivity } from "@/lib/eventStore";
 
 type LoginAttempt = { count: number; resetAt: number };
 
@@ -52,6 +53,11 @@ export async function POST(request: Request) {
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 60 * 60 * 8
+  });
+  await logAdminActivity({
+    type: "admin_login",
+    message: `${admin.username} logged in`,
+    session: { id: admin.id, username: admin.username, role: admin.role, exp: Date.now() + 1000 * 60 * 60 * 8 }
   });
   return response;
 }

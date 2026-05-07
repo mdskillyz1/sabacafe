@@ -56,6 +56,25 @@ enum AdminRole {
   STAFF
 }
 
+enum WebsiteEventType {
+  page_view
+  menu_view
+  add_to_cart
+  checkout_start
+  booking_form_view
+  booking_submit
+  order_complete
+}
+
+enum AdminActivityType {
+  admin_login
+  order_status_update
+  booking_status_update
+  menu_update
+  review_moderation
+  settings_update
+}
+
 model User {
   id              String           @id @default(cuid())
   email           String           @unique
@@ -373,6 +392,36 @@ model AdminUser {
   lastLogin    DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+model WebsiteEvent {
+  id        String           @id @default(cuid())
+  type      WebsiteEventType
+  path      String
+  sessionId String?
+  userId    String?
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  @@index([type])
+  @@index([createdAt])
+  @@index([sessionId])
+}
+
+model AdminActivityLog {
+  id        String            @id @default(cuid())
+  type      AdminActivityType
+  message   String
+  adminId   String?
+  username  String?
+  role      String?
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime          @default(now())
+
+  @@index([type])
+  @@index([adminId])
+  @@index([createdAt])
 }
 
 model AppSettings {

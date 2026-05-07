@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDemoOrder, markDemoPayment } from "@/lib/data";
+import { trackWebsiteEvent } from "@/lib/eventStore";
 import { getStripe } from "@/lib/stripe";
 
 export async function POST(request: Request) {
@@ -10,6 +11,7 @@ export async function POST(request: Request) {
   const stripe = getStripe();
   if (!stripe) {
     await markDemoPayment(orderId, "PAID");
+    await trackWebsiteEvent({ type: "order_complete", path: "/order" });
     return NextResponse.json({
       mode: "demo-paid",
       paymentStatus: "PAID",

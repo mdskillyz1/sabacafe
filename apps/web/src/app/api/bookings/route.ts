@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createBooking } from "@/lib/bookingStore";
+import { trackWebsiteEvent } from "@/lib/eventStore";
 
 export async function POST(request: Request) {
   try {
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
       startTime: String(input.startTime),
       notes: input.notes ? String(input.notes) : undefined
     });
+    await trackWebsiteEvent({ type: "booking_submit", path: "/#booking", sessionId: input.sessionId ? String(input.sessionId) : undefined });
     return NextResponse.json({ booking });
   } catch (error) {
     return NextResponse.json({ message: error instanceof Error ? error.message : "Unable to create booking." }, { status: 409 });

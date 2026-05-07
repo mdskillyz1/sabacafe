@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { BookingStatus } from "@saba/shared";
 import { updateBookingStatus } from "@/lib/bookingStore";
+import { adminSessionFromRequest } from "@/lib/adminSession";
+import { logAdminActivity } from "@/lib/eventStore";
 
 const statuses = new Set<BookingStatus>(["PENDING", "CONFIRMED", "REJECTED", "CANCELLED", "SEATED", "COMPLETED"]);
 
@@ -15,5 +17,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   if (!booking) {
     return NextResponse.json({ message: "Booking not found." }, { status: 404 });
   }
+  await logAdminActivity({
+    type: "booking_status_update",
+    message: `Booking for ${booking.customerName} updated to ${booking.status}`,
+    session: adminSessionFromRequest(request),
+    entityId: booking.id
+  });
   return NextResponse.json({ booking });
 }

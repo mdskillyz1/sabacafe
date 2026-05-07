@@ -27,6 +27,7 @@ docs/
 - Admin order dashboard with status updates: received, preparing, ready, out for delivery, completed, cancelled.
 - Table booking flow with customer guest-size selection, admin-controlled availability, pending approvals, table management, blocked dates, blocked slots, and special hours.
 - Dynamic footer/business info system with admin-managed business name, copyright, address, email, phone, opening hours text, and social links.
+- Admin Overview is a real-data BI dashboard for sales, orders, bookings, website events, top sellers, and staff activity. It shows zero/empty states when no real activity exists.
 - Mobile app has been moved to a future phase and is excluded from the active pnpm workspace so Expo / React Native cannot break the website build.
 - Prisma schema covering users, profiles, addresses, menu, carts, orders, payments, reviews, Google review cache, promos, loyalty, bookings, opening hours, delivery zones, admin users, and settings.
 
@@ -159,6 +160,8 @@ The admin dashboard is web-first and organized around:
 The data model already supports menu editing, categories, images, allergens, add-ons, availability, reviews, Google review settings, opening hours, delivery radius, delivery fees, VAT, promo codes, featured dishes, homepage banners via settings, loyalty rewards, bookings, customers, and sales views.
 
 Website settings currently stores editable footer/business information in `apps/web/data/business-info.json` for local demos, with API routes at `/api/business-info` and `/api/admin/business-info`. The Prisma `AppSettings` model also includes matching fields for the production database path.
+
+Analytics uses real activity only. Website events are tracked through `/api/website-events`; admin activity is logged for logins, settings/menu updates, and order/booking status changes. Local demos store these in `apps/web/data/website-events.json` and `apps/web/data/admin-activity.json`; the Prisma schema includes matching `WebsiteEvent` and `AdminActivityLog` models for production persistence.
 
 ## Future Mobile Phase
 
