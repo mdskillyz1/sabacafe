@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { Instagram, Music2, ShieldCheck } from "lucide-react";
 import { readBusinessInfo } from "@/lib/businessInfoStore";
+import { legalNavigation } from "@/lib/legalContentStore";
 
 export async function Footer() {
   const info = await readBusinessInfo();
 
   return (
     <footer className="border-t border-date/10 bg-[#f7efe1] px-4 py-10 text-date sm:px-6 lg:px-8">
-      <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.2fr_0.9fr_0.9fr]">
+      <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.15fr_0.85fr_0.85fr_1fr]">
         <div>
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-saffron/25 bg-white shadow-sm">
@@ -58,6 +59,17 @@ export async function Footer() {
               <ShieldCheck size={14} /> Staff
             </Link>
           </div>
+        </div>
+
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-clay">Legal</h2>
+          <nav className="mt-4 grid gap-2 text-sm text-date/70" aria-label="Legal navigation">
+            {legalNavigation.map((item) => (
+              <Link key={item.href} href={item.href} className="transition hover:text-date">
+                {item.title}
+              </Link>
+            ))}
+          </nav>
         </div>
       </div>
     </footer>

@@ -113,6 +113,16 @@ export function AdminBusinessInfoSettings() {
           <div className="sm:col-span-2">
             <Field label="Copyright text" value={settings.copyrightText} onChange={(value) => update("copyrightText", value)} error={errors.copyrightText} icon={LinkIcon} />
           </div>
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-semibold text-date/75">
+              Cookie banner text
+              <textarea
+                value={settings.cookieBannerText}
+                onChange={(event) => update("cookieBannerText", event.target.value)}
+                className="focus-ring mt-1 min-h-24 w-full rounded-md border border-date/15 px-4 py-3 font-normal"
+              />
+            </label>
+          </div>
         </div>
       </div>
 

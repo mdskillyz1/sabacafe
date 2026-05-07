@@ -92,7 +92,34 @@ export type BusinessInfoSettings = {
   email: string;
   phone: string;
   openingHoursText: string;
+  cookieBannerText: string;
   socialLinks: BusinessSocialLinks;
+};
+
+export type LegalPageSlug =
+  | "terms-and-conditions"
+  | "privacy-policy"
+  | "cookie-policy"
+  | "refund-policy"
+  | "delivery-policy"
+  | "accessibility";
+
+export type LegalSection = {
+  heading: string;
+  body: string;
+};
+
+export type LegalPageContent = {
+  slug: LegalPageSlug;
+  title: string;
+  summary: string;
+  lastUpdated: string;
+  sections: LegalSection[];
+};
+
+export type LegalContentStore = {
+  pages: LegalPageContent[];
+  updatedAt: string;
 };
 
 export type RestaurantTable = {
@@ -222,6 +249,8 @@ export const defaultBusinessInfoSettings: BusinessInfoSettings = {
   email: "hello@sabacafe.com",
   phone: businessInfo.phone,
   openingHoursText: businessInfo.todayHoursLabel,
+  cookieBannerText:
+    "We use essential cookies to keep this website working and optional cookies to understand how visitors use Saba Cafe online.",
   socialLinks: {
     instagram: "https://www.instagram.com/",
     tiktok: "https://www.tiktok.com/"

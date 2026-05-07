@@ -1,0 +1,91 @@
+{
+  "updatedAt": "2026-05-07T00:00:00.000Z",
+  "pages": [
+    {
+      "slug": "terms-and-conditions",
+      "title": "Terms & Conditions",
+      "summary": "These terms explain how customers may use the Saba Cafe website, place orders, request bookings, and interact with our services.",
+      "lastUpdated": "2026-05-07",
+      "sections": [
+        { "heading": "Website use", "body": "This website is provided for customers to learn about Saba Cafe, view information, place online orders where available, and request table bookings. Please use the website lawfully and do not attempt to interfere with its operation or security." },
+        { "heading": "Orders", "body": "Orders are subject to menu availability, opening hours, acceptance by Saba Cafe, and any pickup or delivery settings shown at checkout. Prices, dishes, and availability may change before an order is confirmed." },
+        { "heading": "Payments", "body": "Online card payments are processed by our payment provider. Saba Cafe does not store full card details. Payment status is separate from order status, so an order may still need to be prepared after payment is approved." },
+        { "heading": "Delivery", "body": "Delivery is available only within the delivery area set by Saba Cafe. Customers are responsible for providing a complete and accurate delivery address, phone number, and delivery notes." },
+        { "heading": "Pickup", "body": "Pickup orders should be collected at the selected time or as soon as the order is marked ready. Please bring your order reference or contact details when collecting." },
+        { "heading": "Bookings", "body": "Table bookings are requests until confirmed by Saba Cafe. Staff may accept, reject, cancel, or amend bookings where operational needs require it." },
+        { "heading": "Allergies", "body": "Customers must tell Saba Cafe about allergies or dietary needs before ordering. Although care is taken, food is prepared in a kitchen that may handle common allergens, so cross-contact cannot be fully guaranteed." },
+        { "heading": "Cancellations and refunds", "body": "Cancellation and refund requests are handled in line with our Refund Policy. Once food preparation has started, cancellations may not be possible." },
+        { "heading": "User conduct", "body": "Customers must not submit abusive, misleading, unlawful, or harmful content through forms, reviews, booking notes, or order notes." },
+        { "heading": "Intellectual property", "body": "The Saba Cafe name, website content, images, branding, and design elements may not be copied or reused without permission, except where allowed by law." },
+        { "heading": "Limitation of liability", "body": "Nothing in these terms limits rights that cannot be limited by law. Saba Cafe is not responsible for losses caused by events outside reasonable control, incorrect customer information, or third-party service disruption." }
+      ]
+    },
+    {
+      "slug": "privacy-policy",
+      "title": "Privacy Policy",
+      "summary": "This policy explains how Saba Cafe handles customer information for orders, bookings, reviews, messages, and website use.",
+      "lastUpdated": "2026-05-07",
+      "sections": [
+        { "heading": "Information we collect", "body": "We may collect your name, phone number, email address, delivery address, order details, booking details, review content, contact form messages, and website usage information." },
+        { "heading": "Orders, bookings, and accounts", "body": "We use order and booking information to provide food, manage pickup or delivery, contact customers about requests, keep operational records, and improve service." },
+        { "heading": "Cookies and analytics", "body": "We use essential cookies for website functionality and may use optional analytics cookies if consent is given. Analytics helps us understand page visits, menu interest, ordering steps, and booking form use." },
+        { "heading": "Payment processing", "body": "Payments are processed by a payment provider such as Stripe. We receive payment status and transaction references but do not store full card details." },
+        { "heading": "Marketing communications", "body": "We only send marketing messages where permitted by law or where you have opted in. You can unsubscribe or ask us to stop marketing contact." },
+        { "heading": "Sharing information", "body": "We may share limited information with service providers that help operate the website, payments, delivery, analytics, hosting, or communications. We do not sell customer personal data." },
+        { "heading": "Your rights", "body": "UK data protection law may give you rights to access, correct, delete, restrict, or object to certain uses of your personal data. You can contact us using the details on this website." },
+        { "heading": "Contact", "body": "For privacy questions, contact Saba Cafe using the email, phone number, or address shown on the Contact page." }
+      ]
+    },
+    {
+      "slug": "cookie-policy",
+      "title": "Cookie Policy",
+      "summary": "This policy explains how cookies and similar technologies are used on the Saba Cafe website.",
+      "lastUpdated": "2026-05-07",
+      "sections": [
+        { "heading": "Essential cookies", "body": "Essential cookies help the website work, including admin sessions, shopping basket behaviour, security, and remembering cookie preferences." },
+        { "heading": "Analytics cookies", "body": "Analytics cookies may help us understand how visitors use the site, such as page visits, menu views, ordering flow activity, and booking form usage. These are only used where consent allows." },
+        { "heading": "Functional cookies", "body": "Functional cookies may remember preferences such as consent choices, saved form choices, or interface settings." },
+        { "heading": "Third-party services", "body": "Some services, such as maps, payment providers, or embedded links, may set their own cookies or collect usage information under their own policies." },
+        { "heading": "Managing consent", "body": "The cookie banner lets you accept all cookies, reject non-essential cookies, or manage preferences. You can clear browser storage to reset your choice." }
+      ]
+    },
+    {
+      "slug": "refund-policy",
+      "title": "Refund Policy",
+      "summary": "This policy explains how Saba Cafe handles refunds, cancellations, missing items, and delivery issues.",
+      "lastUpdated": "2026-05-07",
+      "sections": [
+        { "heading": "Order refunds", "body": "Refunds are reviewed case by case. If an order cannot be fulfilled, is cancelled before preparation, or has a confirmed issue, Saba Cafe may offer a refund, replacement, or store resolution." },
+        { "heading": "Incorrect or missing items", "body": "Please contact us as soon as possible with your order reference, name, phone number, and details of the issue. We may ask for a photo where useful." },
+        { "heading": "Cancellation window", "body": "Orders can usually only be cancelled before food preparation has started. Once preparation has started, a refund may not be available unless there is a confirmed problem." },
+        { "heading": "Delivery issues", "body": "If delivery is delayed or cannot be completed due to an incorrect address, missing phone contact, or unavailable recipient, a refund may not be available." },
+        { "heading": "Contact process", "body": "For refund requests, contact Saba Cafe by phone or email with your order details. We aim to respond as soon as possible during opening hours." }
+      ]
+    },
+    {
+      "slug": "delivery-policy",
+      "title": "Delivery Policy",
+      "summary": "This policy explains delivery coverage, timings, pickup expectations, and customer address responsibilities.",
+      "lastUpdated": "2026-05-07",
+      "sections": [
+        { "heading": "Delivery radius", "body": "Delivery is available only within the radius and areas set by Saba Cafe. The website may prevent checkout where an address is outside the supported area." },
+        { "heading": "Delivery times", "body": "Estimated delivery and preparation times are guidance only. Times may change because of traffic, order volume, weather, kitchen capacity, or events outside our control." },
+        { "heading": "Pickup expectations", "body": "Pickup customers should arrive at the selected time or when the order is marked ready. Food quality can be affected by late collection." },
+        { "heading": "Delays", "body": "We try to communicate significant delays where possible. A delay alone does not automatically mean a refund is due." },
+        { "heading": "Address responsibility", "body": "Customers are responsible for providing an accurate address, postcode, contact number, and any access instructions needed for delivery." }
+      ]
+    },
+    {
+      "slug": "accessibility",
+      "title": "Accessibility Statement",
+      "summary": "Saba Cafe aims to make its website easy to use for as many customers as possible.",
+      "lastUpdated": "2026-05-07",
+      "sections": [
+        { "heading": "Our commitment", "body": "We aim to provide a clear, readable, mobile-friendly website for ordering, booking, contact information, and restaurant updates." },
+        { "heading": "Responsive support", "body": "The website is designed to work across mobile, tablet, and desktop screens with readable text, clear buttons, and keyboard-friendly controls where possible." },
+        { "heading": "Ongoing improvements", "body": "Accessibility is an ongoing process. We review forms, colour contrast, navigation, and content structure as the platform develops." },
+        { "heading": "Contact us", "body": "If you have difficulty using any part of the website, please contact Saba Cafe with details of the issue so we can help and improve the experience." }
+      ]
+    }
+  ]
+}

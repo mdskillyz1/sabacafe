@@ -58,6 +58,7 @@ export function normalizeBusinessInfo(input: Partial<BusinessInfoSettings>): Bus
     email: cleanString(input.email, defaultBusinessInfoSettings.email).toLowerCase(),
     phone: cleanString(input.phone, defaultBusinessInfoSettings.phone),
     openingHoursText: cleanString(input.openingHoursText, defaultBusinessInfoSettings.openingHoursText),
+    cookieBannerText: cleanString(input.cookieBannerText, defaultBusinessInfoSettings.cookieBannerText),
     socialLinks: {
       instagram: cleanOptionalUrl(input.socialLinks?.instagram),
       tiktok: cleanOptionalUrl(input.socialLinks?.tiktok)

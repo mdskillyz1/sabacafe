@@ -34,6 +34,7 @@ async function main() {
       email: defaultBusinessInfoSettings.email,
       phone: defaultBusinessInfoSettings.phone,
       openingHoursText: defaultBusinessInfoSettings.openingHoursText,
+      cookieBannerText: defaultBusinessInfoSettings.cookieBannerText,
       socialLinks: defaultBusinessInfoSettings.socialLinks,
       googleReviewUrl: process.env.GOOGLE_REVIEW_URL ?? businessInfo.googleReviewUrl,
       googlePlaceId: process.env.GOOGLE_PLACE_ID,

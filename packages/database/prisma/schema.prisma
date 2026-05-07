@@ -435,6 +435,7 @@ model AppSettings {
   email                  String?
   phone                  String?
   openingHoursText       String?
+  cookieBannerText       String?
   socialLinks            Json?
   googleReviewUrl        String?
   googlePlaceId          String?
@@ -449,4 +450,26 @@ model AppSettings {
   instagramUrl           String?
   tiktokUrl              String?
   updatedAt              DateTime @updatedAt
+}
+
+model LegalPage {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  summary     String
+  lastUpdated String
+  sections    Json
+  published   Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+}
+
+model CookieConsent {
+  id         String   @id @default(cuid())
+  sessionId  String?
+  essential  Boolean  @default(true)
+  analytics  Boolean  @default(false)
+  functional Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([sessionId])
 }

@@ -4,6 +4,7 @@ import { ShoppingBag } from "lucide-react";
 import { businessInfo, openingHours } from "@saba/shared";
 import { Footer } from "./Footer";
 import { WebsiteEventTracker } from "./WebsiteEventTracker";
+import { CookieConsentBanner } from "./CookieConsentBanner";
 import { readBusinessInfo } from "@/lib/businessInfoStore";
 import "./globals.css";
 
@@ -91,6 +92,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </header>
         {children}
         <Footer />
+        <CookieConsentBanner text={footerInfo.cookieBannerText} />
         <Link
           href="/order"
           className="focus-ring fixed bottom-4 left-4 right-4 z-50 flex items-center justify-center gap-2 rounded-full bg-mint px-5 py-4 font-semibold text-white shadow-soft md:hidden"
