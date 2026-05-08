@@ -24,8 +24,5 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "@saba/shared": "workspace:*"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   }
 }
