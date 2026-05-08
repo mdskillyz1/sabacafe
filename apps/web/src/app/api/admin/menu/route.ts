@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { describeMenuDatabaseError, menuDatabaseConfigured, readMenuStore, writeMenuStore, type MenuStore } from "@/lib/menuStore";
 import { adminSessionFromRequest } from "@/lib/adminSession";
 import { logAdminActivity } from "@/lib/eventStore";
+import { menuCategories } from "@saba/shared";
 
 function revalidateMenuPages() {
   revalidatePath("/");
@@ -26,7 +27,19 @@ export async function GET() {
     });
   } catch (error) {
     const description = describeMenuDatabaseError(error);
-    return NextResponse.json({ error: description.message, detail: description.detail }, { status: 503 });
+    return NextResponse.json({
+      published: false,
+      updatedAt: new Date().toISOString(),
+      categories: menuCategories,
+      items: [],
+      error: description.message,
+      detail: description.detail,
+      setup: {
+        databaseConfigured: menuDatabaseConfigured(),
+        saveEnabled: false,
+        message: description.message
+      }
+    });
   }
 }
 

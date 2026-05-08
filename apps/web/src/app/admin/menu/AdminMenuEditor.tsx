@@ -386,7 +386,14 @@ export function AdminMenuEditor() {
         </div>
       </div>
 
-      {store.setup?.message ? <p className="rounded-md bg-saffron/15 p-3 text-sm font-semibold text-clay">{store.setup.message}</p> : null}
+      {store.setup?.message ? (
+        <div className="rounded-md bg-saffron/15 p-4 text-sm font-semibold text-clay">
+          <p>{store.setup.message}</p>
+          <p className="mt-2 font-normal text-date/70">
+            To enable real menu saving, add `DATABASE_URL` in Vercel, run `./tools/pnpm db:push`, then redeploy.
+          </p>
+        </div>
+      ) : null}
       {message ? <p className="rounded-md bg-mint/10 p-3 text-sm font-semibold text-mint">{message}</p> : null}
       {error ? <p className="rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p> : null}
       {loading ? <p className="rounded-md bg-white p-4 text-sm font-semibold text-date/70 shadow-sm">Loading menu items...</p> : null}

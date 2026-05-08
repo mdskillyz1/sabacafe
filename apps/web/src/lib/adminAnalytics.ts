@@ -109,7 +109,15 @@ export async function getAnalytics(range: DateRange) {
   const bookingStore = await readBookingStore();
   const websiteStore = await readWebsiteEvents();
   const activityStore = await readAdminActivity();
-  const menuStore = await readMenuStore();
+  const menuStore = await readMenuStore().catch((error) => {
+    console.error("Analytics menu summary unavailable", error);
+    return {
+      published: false,
+      updatedAt: new Date().toISOString(),
+      categories: [],
+      items: []
+    };
+  });
 
   const orders = allOrders.filter((order) => inRange(order.createdAt, range));
   const previousOrders = allOrders.filter((order) => inRange(order.createdAt, previous));
