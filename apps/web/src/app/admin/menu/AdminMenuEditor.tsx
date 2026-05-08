@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Save, Send, Trash2 } from "lucide-react";
+import type { DragEvent } from "react";
+import { ImageIcon, Plus, Save, Send, Trash2, UploadCloud, X } from "lucide-react";
 import { menuCategories, money, type AddOn, type MenuCategory, type MenuItem, type MenuItemOption } from "@saba/shared";
 import { MenuCard } from "@/components/MenuCard";
 
@@ -24,6 +25,8 @@ const blankItem = (): MenuItem => ({
   spiceLevel: 0,
   halal: true,
   available: true,
+  published: false,
+  hidden: false,
   popular: false,
   recommended: false,
   prepMinutes: 15,
@@ -71,17 +74,121 @@ const textToAddOns = (value: string): AddOn[] =>
       return { id: slugify(name), name: name.trim(), pricePence: Math.round(Number(price) * 100) };
     });
 
+function ImageUploadField({
+  image,
+  uploading,
+  onUpload,
+  onRemove,
+  onUrlChange
+}: {
+  image: string;
+  uploading: boolean;
+  onUpload: (file: File) => void;
+  onRemove: () => void;
+  onUrlChange: (image: string) => void;
+}) {
+  const [dragging, setDragging] = useState(false);
+
+  function handleFiles(files: FileList | null) {
+    const file = files?.[0];
+    if (file) onUpload(file);
+  }
+
+  function handleDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setDragging(false);
+    handleFiles(event.dataTransfer.files);
+  }
+
+  return (
+    <div className="text-sm font-semibold text-date/70">
+      Dish image
+      <div
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+        className={`mt-1 grid gap-4 rounded-lg border border-dashed p-4 transition md:grid-cols-[180px_1fr] ${
+          dragging ? "border-mint bg-mint/10" : "border-date/20 bg-cream/70"
+        }`}
+      >
+        <div className="relative min-h-36 overflow-hidden rounded-md bg-white">
+          {image ? (
+            <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full min-h-36 flex-col items-center justify-center gap-2 text-date/40">
+              <ImageIcon size={28} />
+              <span className="text-xs">No image</span>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col justify-center gap-3">
+          <div>
+            <p className="font-semibold text-date">Drop a dish photo here</p>
+            <p className="mt-1 text-xs font-normal leading-5 text-date/55">JPG, PNG, or WebP. Maximum 1.5MB. Images are saved with the menu item so they work on Vercel.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <label className="focus-ring inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full bg-date px-4 py-2 text-sm font-semibold text-cream">
+              <UploadCloud size={16} />
+              {uploading ? "Uploading..." : image ? "Replace image" : "Choose image"}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                disabled={uploading}
+                onChange={(event) => handleFiles(event.target.files)}
+              />
+            </label>
+            {image ? (
+              <button
+                type="button"
+                onClick={onRemove}
+                className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-full border border-date/15 px-4 py-2 text-sm font-semibold text-date"
+              >
+                <X size={16} /> Remove
+              </button>
+            ) : null}
+          </div>
+          <label className="text-xs font-semibold text-date/55">
+            Or paste image URL
+            <input
+              value={image.startsWith("data:") ? "" : image}
+              onChange={(event) => onUrlChange(event.target.value)}
+              placeholder="https://..."
+              className="focus-ring mt-1 w-full rounded-md border border-date/15 bg-white px-3 py-3 font-normal text-date"
+            />
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AdminMenuEditor() {
   const [store, setStore] = useState<MenuStore>({ published: false, updatedAt: "", categories: menuCategories, items: [] });
   const [selectedItemId, setSelectedItemId] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [uploadingItemId, setUploadingItemId] = useState("");
 
   async function load() {
-    const response = await fetch("/api/admin/menu", { cache: "no-store" });
-    const data = await response.json();
-    setStore(data);
-    setSelectedItemId((current) => current || data.items[0]?.id || "");
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch("/api/admin/menu", { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Menu could not be loaded.");
+      setStore(data);
+      setSelectedItemId((current) => current || data.items[0]?.id || "");
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Menu could not be loaded.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -89,10 +196,14 @@ export function AdminMenuEditor() {
   }, []);
 
   function updateItem(id: string, patch: Partial<MenuItem>) {
+    setMessage("");
+    setError("");
     setSelectedItemId(id);
     setStore((current) => ({
       ...current,
-      items: current.items.map((item) => (item.id === id ? { ...item, ...patch } : item))
+      items: current.items.map((item) =>
+        item.id === id ? { ...item, published: patch.published ?? false, ...patch } : item
+      )
     }));
   }
 
@@ -128,32 +239,68 @@ export function AdminMenuEditor() {
   async function save(published = store.published) {
     setSaving(true);
     setMessage("");
+    setError("");
     const payload: MenuStore = {
       ...store,
       published,
       items: store.items.map((item) => ({
         ...item,
         slug: item.slug || slugify(item.name),
-        image: item.image || "/images/menu-placeholder.jpg"
+        image: item.image || "",
+        published: published ? true : item.published === true
       }))
     };
-    const response = await fetch("/api/admin/menu", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    const saved = await response.json();
-    setStore(saved);
-    setSaving(false);
-    setMessage(published ? "Menu published to customers." : "Draft saved.");
+    try {
+      const response = await fetch("/api/admin/menu", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const saved = await response.json();
+      if (!response.ok) throw new Error(saved.error ?? "Menu could not be saved.");
+      setStore(saved);
+      setSelectedItemId((current) => current || saved.items[0]?.id || "");
+      setMessage(published ? "Menu published to customers." : "Draft saved.");
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Menu could not be saved.");
+    } finally {
+      setSaving(false);
+    }
   }
+
+  async function uploadImage(itemId: string, file: File) {
+    setUploadingItemId(itemId);
+    setMessage("");
+    setError("");
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const response = await fetch("/api/admin/menu/upload", {
+        method: "POST",
+        body: formData
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Image could not be uploaded.");
+      updateItem(itemId, { image: data.imageUrl });
+      setMessage("Image added. Save draft or publish to keep this change.");
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Image could not be uploaded.");
+    } finally {
+      setUploadingItemId("");
+    }
+  }
+
+  const publishedCount = store.items.filter((item) => item.published && !item.hidden).length;
+  const draftCount = store.items.filter((item) => !item.published).length;
 
   return (
     <section className="mt-8 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-date/10 bg-white p-5 shadow-sm">
         <div>
           <p className="text-sm font-semibold text-date">{store.published ? "Published" : "Draft only"}</p>
-          <p className="text-sm text-date/60">{store.items.length} item{store.items.length === 1 ? "" : "s"} in admin menu</p>
+          <p className="text-sm text-date/60">
+            {store.items.length} item{store.items.length === 1 ? "" : "s"} in admin menu · {publishedCount} published · {draftCount} draft
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={addItem} className="focus-ring inline-flex items-center gap-2 rounded-full border border-date/15 px-4 py-3 font-semibold text-date">
@@ -169,6 +316,8 @@ export function AdminMenuEditor() {
       </div>
 
       {message ? <p className="rounded-md bg-mint/10 p-3 text-sm font-semibold text-mint">{message}</p> : null}
+      {error ? <p className="rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p> : null}
+      {loading ? <p className="rounded-md bg-white p-4 text-sm font-semibold text-date/70 shadow-sm">Loading menu items...</p> : null}
 
       {!store.items.length ? (
         <div className="rounded-lg border border-date/10 bg-cream p-8 text-center">
@@ -192,6 +341,13 @@ export function AdminMenuEditor() {
                 <div>
                   <h2 className="font-display text-3xl font-semibold text-date">{item.name || "New menu item"}</h2>
                   <p className="mt-1 text-sm text-date/60">{item.pricePence ? money(item.pricePence) : "Price not set"}</p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
+                    <span className={`rounded-full px-3 py-1 ${item.published ? "bg-mint/10 text-mint" : "bg-saffron/15 text-clay"}`}>
+                      {item.published ? "Published" : "Draft"}
+                    </span>
+                    {item.hidden ? <span className="rounded-full bg-date/10 px-3 py-1 text-date/60">Hidden</span> : null}
+                    {!item.available ? <span className="rounded-full bg-red-50 px-3 py-1 text-red-700">Unavailable</span> : null}
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -223,10 +379,15 @@ export function AdminMenuEditor() {
                   Price
                   <input type="number" step="0.01" value={(item.pricePence / 100).toString()} onChange={(event) => updateItem(item.id, { pricePence: Math.round(Number(event.target.value) * 100) })} className="focus-ring mt-1 w-full rounded-md border border-date/15 px-3 py-3 font-normal" />
                 </label>
-                <label className="text-sm font-semibold text-date/70">
-                  Image URL
-                  <input value={item.image} onChange={(event) => updateItem(item.id, { image: event.target.value })} placeholder="/images/dish.jpg" className="focus-ring mt-1 w-full rounded-md border border-date/15 px-3 py-3 font-normal" />
-                </label>
+                <div className="md:col-span-2">
+                  <ImageUploadField
+                    image={item.image}
+                    uploading={uploadingItemId === item.id}
+                    onUpload={(file) => uploadImage(item.id, file)}
+                    onRemove={() => updateItem(item.id, { image: "" })}
+                    onUrlChange={(image) => updateItem(item.id, { image })}
+                  />
+                </div>
                 <label className="text-sm font-semibold text-date/70">
                   Allergens
                   <input value={listToText(item.allergens)} onChange={(event) => updateItem(item.id, { allergens: textToList(event.target.value) })} placeholder="gluten, milk, nuts" className="focus-ring mt-1 w-full rounded-md border border-date/15 px-3 py-3 font-normal" />

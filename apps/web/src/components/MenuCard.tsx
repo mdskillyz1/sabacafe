@@ -8,7 +8,7 @@ import { money, type MenuItem } from "@saba/shared";
 export function MenuCard({ item, onAdd, compact = false }: { item: MenuItem; onAdd?: (item: MenuItem) => void; compact?: boolean }) {
   return (
     <article className={`grid overflow-hidden rounded-lg border border-date/10 bg-white shadow-sm ${compact ? "" : "sm:grid-cols-[180px_1fr]"}`}>
-      <FoodImage label={item.name} className={compact ? "min-h-48" : "min-h-48 sm:min-h-full"} />
+      <FoodImage label={item.name} src={item.image} className={compact ? "min-h-48" : "min-h-48 sm:min-h-full"} />
       <div className={`flex flex-col p-5 ${compact ? "min-h-0" : "min-h-64"}`}>
         <div className="flex flex-wrap gap-2">
           {item.halal ? <Badge tone="green">Halal</Badge> : null}

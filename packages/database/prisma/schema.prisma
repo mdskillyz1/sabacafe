@@ -140,6 +140,7 @@ model MenuItem {
   spiceLevel   Int              @default(0)
   halal        Boolean          @default(true)
   available    Boolean          @default(true)
+  published    Boolean          @default(false)
   hidden       Boolean          @default(false)
   popular      Boolean          @default(false)
   recommended  Boolean          @default(false)

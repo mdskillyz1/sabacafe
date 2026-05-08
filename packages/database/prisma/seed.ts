@@ -83,7 +83,7 @@ async function main() {
   }
 
   for (const [index, item] of menuItems.entries()) {
-    await prisma.menuItem.upsert({
+    await db.menuItem.upsert({
       where: { id: item.id },
       update: {
         categoryId: item.categoryId,
@@ -96,6 +96,7 @@ async function main() {
         spiceLevel: item.spiceLevel,
         halal: item.halal,
         available: item.available,
+        published: item.published ?? false,
         popular: item.popular,
         recommended: item.recommended,
         prepMinutes: item.prepMinutes,
@@ -113,6 +114,7 @@ async function main() {
         spiceLevel: item.spiceLevel,
         halal: item.halal,
         available: item.available,
+        published: item.published ?? false,
         popular: item.popular,
         recommended: item.recommended,
         prepMinutes: item.prepMinutes,

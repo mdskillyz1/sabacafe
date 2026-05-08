@@ -41,6 +41,7 @@ export type MenuItem = {
   spiceLevel: 0 | 1 | 2 | 3;
   halal: boolean;
   available: boolean;
+  published?: boolean;
   hidden?: boolean;
   popular: boolean;
   recommended: boolean;

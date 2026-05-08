@@ -47,7 +47,7 @@ docs/
 ./tools/pnpm install
 cp .env.example .env
 PATH="$PWD/tools:$PATH" ./tools/pnpm db:generate
-PATH="$PWD/tools:$PATH" ./tools/pnpm db:migrate
+PATH="$PWD/tools:$PATH" ./tools/pnpm db:push
 PATH="$PWD/tools:$PATH" ./tools/pnpm db:seed
 PATH="$PWD/tools:$PATH" ./tools/pnpm dev:web
 ```
@@ -75,7 +75,11 @@ VAT_RATE                      Default 0.20
 MINIMUM_ORDER_PENCE           Default 1200
 ```
 
-For Vercel, `NEXT_PUBLIC_SITE_URL` is recommended for correct social preview URLs, but the app also falls back to Vercel's `VERCEL_URL` so the homepage can render without it. Stripe, Google, and database variables are optional for the temporary demo path; missing values fall back to demo checkout, manual Google review links, and bundled/default website settings.
+For Vercel, `NEXT_PUBLIC_SITE_URL` is recommended for correct social preview URLs, but the app also falls back to Vercel's `VERCEL_URL` so the homepage can render without it. Stripe and Google variables are optional for the temporary demo path; missing values fall back to demo checkout and manual Google review links.
+
+Menu management is database-backed when `DATABASE_URL` is set. Run `PATH="$PWD/tools:$PATH" ./tools/pnpm db:push` after pulling schema changes so the `MenuItem.published` column exists before staff publish dishes. If `DATABASE_URL` is missing, the app keeps a local JSON fallback for development previews only; that fallback is not durable on Vercel.
+
+Admin menu images are uploaded through `/api/admin/menu/upload`, validated as JPG/PNG/WebP up to 1.5MB, and stored with the menu item as a data URL. This avoids Vercel filesystem storage. For a larger production catalogue, replace that endpoint with Vercel Blob, Cloudinary, or Supabase Storage while keeping the saved `image` URL field.
 
 Admin login:
 
@@ -142,7 +146,7 @@ Never create fake reviews. Demo placeholders in this project are labelled as pla
    - `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_URL`: Saba Cafe Google map embed URL
 6. Deploy.
 
-Note: this is suitable for a temporary client preview. The admin currently stores editable menu/settings in local JSON files, which is not durable on Netlify serverless hosting. For a production admin where staff changes must persist reliably, connect the admin to PostgreSQL storage before launch.
+Note: this is suitable for a temporary client preview. Production menu persistence requires `DATABASE_URL` and the Prisma schema pushed to the database; local JSON fallbacks are only for development previews.
 
 ## Admin Roadmap
 
