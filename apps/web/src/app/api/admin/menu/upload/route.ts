@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const maxBytes = 1.5 * 1024 * 1024;
+const maxBytes = 5 * 1024 * 1024;
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   }
 
   if (file.size > maxBytes) {
-    return NextResponse.json({ error: "Image must be 1.5MB or smaller." }, { status: 400 });
+    return NextResponse.json({ error: "Image must be 5MB or smaller." }, { status: 400 });
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());

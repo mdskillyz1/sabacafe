@@ -32,6 +32,9 @@ export function MenuPageClient() {
           Our online menu is managed directly by Saba Cafe. When new dishes are published, you will see them here first for
           ordering, pickup, delivery, and dine-in visits at {businessInfo.formattedAddress}.
         </p>
+        <p className="mt-4 inline-flex rounded-full bg-mint/10 px-4 py-2 text-sm font-semibold text-mint">
+          100% halal Somali food, prepared fresh by Saba Cafe.
+        </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <a href="/order" className="rounded-full bg-date px-5 py-3 font-semibold text-cream">Order Now</a>
           <a href={businessInfo.googleDirectionsUrl} className="rounded-full border border-date/15 bg-white px-5 py-3 font-semibold text-date">

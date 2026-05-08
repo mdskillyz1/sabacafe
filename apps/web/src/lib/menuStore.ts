@@ -11,6 +11,16 @@ export type MenuStore = {
   items: MenuItem[];
 };
 
+export class MenuDatabaseSetupError extends Error {
+  code: "DATABASE_URL_MISSING" | "DATABASE_SCHEMA_MISMATCH" | "DATABASE_CONNECTION_FAILED";
+
+  constructor(code: MenuDatabaseSetupError["code"], message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "MenuDatabaseSetupError";
+    this.code = code;
+  }
+}
+
 const storeFileName = "menu-store.json";
 const candidateStorePaths = [
   path.join(process.cwd(), "data", storeFileName),
@@ -29,6 +39,45 @@ const db = prisma as any;
 
 function databaseMenuEnabled() {
   return Boolean(process.env.DATABASE_URL);
+}
+
+export function menuDatabaseConfigured() {
+  return databaseMenuEnabled();
+}
+
+export function describeMenuDatabaseError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  const prismaCode = typeof error === "object" && error && "code" in error ? String((error as { code?: unknown }).code) : "";
+
+  if (error instanceof MenuDatabaseSetupError) {
+    return {
+      code: error.code,
+      message: error.message,
+      detail: process.env.NODE_ENV === "production" ? undefined : error.cause instanceof Error ? error.cause.message : undefined
+    };
+  }
+
+  if (prismaCode === "P2022" || /published|column|does not exist/i.test(message)) {
+    return {
+      code: "DATABASE_SCHEMA_MISMATCH",
+      message: "The menu database schema is not up to date. Run ./tools/pnpm db:push, then redeploy.",
+      detail: process.env.NODE_ENV === "production" ? undefined : message
+    };
+  }
+
+  if (/Can't reach database|connect|ECONNREFUSED|ENOTFOUND|DATABASE_URL/i.test(message)) {
+    return {
+      code: "DATABASE_CONNECTION_FAILED",
+      message: "The menu database cannot be reached. Check DATABASE_URL in Vercel and try again.",
+      detail: process.env.NODE_ENV === "production" ? undefined : message
+    };
+  }
+
+  return {
+    code: "MENU_SAVE_FAILED",
+    message: "Menu could not be saved. Please check the database setup and try again.",
+    detail: process.env.NODE_ENV === "production" ? undefined : message
+  };
 }
 
 function slugify(value: string) {
@@ -52,7 +101,7 @@ function normalizeItem(item: MenuItem, index: number): MenuItem {
     pricePence: Math.max(0, Number(item.pricePence) || 0),
     image: item.image || "",
     allergens: item.allergens ?? [],
-    spiceLevel: Math.min(3, Math.max(0, Number(item.spiceLevel))) as 0 | 1 | 2 | 3,
+    spiceLevel: Math.min(3, Math.max(0, Number(item.spiceLevel ?? 0))) as 0 | 1 | 2 | 3,
     halal: item.halal !== false,
     available: item.available !== false,
     published: item.published === true,
@@ -286,7 +335,11 @@ export async function readMenuStore(): Promise<MenuStore> {
     try {
       return await readDatabaseMenuStore();
     } catch (error) {
-      console.error("Database menu read failed; falling back to local menu store.", error);
+      console.error("Database menu read failed.", error);
+      const description = describeMenuDatabaseError(error);
+      throw new MenuDatabaseSetupError(description.code as MenuDatabaseSetupError["code"], description.message, {
+        cause: error instanceof Error ? error : undefined
+      });
     }
   }
 
@@ -305,12 +358,22 @@ export async function readMenuStore(): Promise<MenuStore> {
 }
 
 export async function writeMenuStore(store: MenuStore) {
+  if (!databaseMenuEnabled()) {
+    throw new MenuDatabaseSetupError(
+      "DATABASE_URL_MISSING",
+      "Menu saving needs a PostgreSQL database. Add DATABASE_URL in Vercel, run ./tools/pnpm db:push, then redeploy."
+    );
+  }
+
   if (databaseMenuEnabled()) {
     try {
       return await writeDatabaseMenuStore(store);
     } catch (error) {
       console.error("Database menu write failed.", error);
-      throw error;
+      const description = describeMenuDatabaseError(error);
+      throw new MenuDatabaseSetupError(description.code as MenuDatabaseSetupError["code"], description.message, {
+        cause: error instanceof Error ? error : undefined
+      });
     }
   }
 

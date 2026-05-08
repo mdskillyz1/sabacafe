@@ -11,6 +11,11 @@ type MenuStore = {
   updatedAt: string;
   categories: MenuCategory[];
   items: MenuItem[];
+  setup?: {
+    databaseConfigured: boolean;
+    saveEnabled: boolean;
+    message: string | null;
+  };
 };
 
 const blankItem = (): MenuItem => ({
@@ -54,6 +59,17 @@ const optionsToText = (rows: MenuItemOption[]) =>
 const addOnsToText = (rows: AddOn[]) =>
   rows.map((row) => `${row.name}|${(Number(row.pricePence) / 100).toFixed(2)}`).join("\n");
 
+const gbpFormatter = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
+
+const priceToInput = (pence: number) => gbpFormatter.format(Math.max(0, Number(pence) || 0) / 100);
+
+const inputToPence = (value: string) => {
+  const normalized = value.replace(/[£,\s]/g, "");
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount) || amount < 0) return 0;
+  return Math.round(amount * 100);
+};
+
 const textToOptions = (value: string): MenuItemOption[] =>
   value
     .split("\n")
@@ -91,7 +107,11 @@ function ImageUploadField({
 
   function handleFiles(files: FileList | null) {
     const file = files?.[0];
-    if (file) onUpload(file);
+    if (file) {
+      compressMenuImage(file)
+        .then(onUpload)
+        .catch(() => onUpload(file));
+    }
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
@@ -127,7 +147,7 @@ function ImageUploadField({
         <div className="flex flex-col justify-center gap-3">
           <div>
             <p className="font-semibold text-date">Drop a dish photo here</p>
-            <p className="mt-1 text-xs font-normal leading-5 text-date/55">JPG, PNG, or WebP. Maximum 1.5MB. Images are saved with the menu item so they work on Vercel.</p>
+            <p className="mt-1 text-xs font-normal leading-5 text-date/55">JPG, PNG, or WebP. Maximum 5MB. Large photos are resized in your browser before upload.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <label className="focus-ring inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full bg-date px-4 py-2 text-sm font-semibold text-cream">
@@ -164,6 +184,56 @@ function ImageUploadField({
       </div>
     </div>
   );
+}
+
+function PriceInput({ value, onChange }: { value: number; onChange: (pence: number) => void }) {
+  const [displayValue, setDisplayValue] = useState(priceToInput(value));
+
+  useEffect(() => {
+    setDisplayValue(priceToInput(value));
+  }, [value]);
+
+  return (
+    <input
+      inputMode="decimal"
+      value={displayValue}
+      onChange={(event) => {
+        const next = event.target.value.replace(/[^0-9£.,\s]/g, "");
+        setDisplayValue(next);
+        onChange(inputToPence(next));
+      }}
+      onBlur={() => setDisplayValue(priceToInput(value))}
+      className="focus-ring mt-1 w-full rounded-md border border-date/15 px-3 py-3 font-normal"
+    />
+  );
+}
+
+async function compressMenuImage(file: File) {
+  if (!file.type.startsWith("image/")) return file;
+  if (typeof window === "undefined") return file;
+
+  const imageUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = imageUrl;
+    });
+    const maxSide = 1600;
+    const ratio = Math.min(1, maxSide / Math.max(image.width, image.height));
+    const width = Math.round(image.width * ratio);
+    const height = Math.round(image.height * ratio);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext("2d")?.drawImage(image, 0, 0, width, height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.82));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" });
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
 }
 
 export function AdminMenuEditor() {
@@ -292,6 +362,7 @@ export function AdminMenuEditor() {
 
   const publishedCount = store.items.filter((item) => item.published && !item.hidden).length;
   const draftCount = store.items.filter((item) => !item.published).length;
+  const saveDisabled = saving || store.setup?.saveEnabled === false;
 
   return (
     <section className="mt-8 space-y-6">
@@ -306,15 +377,16 @@ export function AdminMenuEditor() {
           <button type="button" onClick={addItem} className="focus-ring inline-flex items-center gap-2 rounded-full border border-date/15 px-4 py-3 font-semibold text-date">
             <Plus size={17} /> Add item
           </button>
-          <button type="button" onClick={() => save(false)} disabled={saving} className="focus-ring inline-flex items-center gap-2 rounded-full bg-date px-4 py-3 font-semibold text-cream disabled:opacity-60">
+          <button type="button" onClick={() => save(false)} disabled={saveDisabled} className="focus-ring inline-flex items-center gap-2 rounded-full bg-date px-4 py-3 font-semibold text-cream disabled:opacity-60">
             <Save size={17} /> Save draft
           </button>
-          <button type="button" onClick={() => save(true)} disabled={saving || !store.items.length} className="focus-ring inline-flex items-center gap-2 rounded-full bg-mint px-4 py-3 font-semibold text-white disabled:opacity-60">
+          <button type="button" onClick={() => save(true)} disabled={saveDisabled || !store.items.length} className="focus-ring inline-flex items-center gap-2 rounded-full bg-mint px-4 py-3 font-semibold text-white disabled:opacity-60">
             <Send size={17} /> Publish
           </button>
         </div>
       </div>
 
+      {store.setup?.message ? <p className="rounded-md bg-saffron/15 p-3 text-sm font-semibold text-clay">{store.setup.message}</p> : null}
       {message ? <p className="rounded-md bg-mint/10 p-3 text-sm font-semibold text-mint">{message}</p> : null}
       {error ? <p className="rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p> : null}
       {loading ? <p className="rounded-md bg-white p-4 text-sm font-semibold text-date/70 shadow-sm">Loading menu items...</p> : null}
@@ -377,7 +449,7 @@ export function AdminMenuEditor() {
                 </label>
                 <label className="text-sm font-semibold text-date/70">
                   Price
-                  <input type="number" step="0.01" value={(item.pricePence / 100).toString()} onChange={(event) => updateItem(item.id, { pricePence: Math.round(Number(event.target.value) * 100) })} className="focus-ring mt-1 w-full rounded-md border border-date/15 px-3 py-3 font-normal" />
+                  <PriceInput value={item.pricePence} onChange={(pricePence) => updateItem(item.id, { pricePence })} />
                 </label>
                 <div className="md:col-span-2">
                   <ImageUploadField
@@ -395,7 +467,7 @@ export function AdminMenuEditor() {
                 <label className="text-sm font-semibold text-date/70">
                   Spice level
                   <select value={item.spiceLevel} onChange={(event) => updateItem(item.id, { spiceLevel: Number(event.target.value) as 0 | 1 | 2 | 3 })} className="focus-ring mt-1 w-full rounded-md border border-date/15 px-3 py-3 font-normal">
-                    <option value={0}>0 - No spice</option>
+                    <option value={0}>Not applicable</option>
                     <option value={1}>1 - Mild</option>
                     <option value={2}>2 - Medium</option>
                     <option value={3}>3 - Hot</option>
@@ -417,7 +489,6 @@ export function AdminMenuEditor() {
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 {[
-                  ["Halal", "halal"],
                   ["Available", "available"],
                   ["Popular badge", "popular"],
                   ["Recommended badge", "recommended"],

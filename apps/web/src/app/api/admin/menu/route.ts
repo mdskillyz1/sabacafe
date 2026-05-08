@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { readMenuStore, writeMenuStore, type MenuStore } from "@/lib/menuStore";
+import { describeMenuDatabaseError, menuDatabaseConfigured, readMenuStore, writeMenuStore, type MenuStore } from "@/lib/menuStore";
 import { adminSessionFromRequest } from "@/lib/adminSession";
 import { logAdminActivity } from "@/lib/eventStore";
 
@@ -12,7 +12,22 @@ function revalidateMenuPages() {
 }
 
 export async function GET() {
-  return NextResponse.json(await readMenuStore());
+  try {
+    const store = await readMenuStore();
+    return NextResponse.json({
+      ...store,
+      setup: {
+        databaseConfigured: menuDatabaseConfigured(),
+        saveEnabled: menuDatabaseConfigured(),
+        message: menuDatabaseConfigured()
+          ? null
+          : "Menu saving needs a PostgreSQL DATABASE_URL. Add it in Vercel, run ./tools/pnpm db:push, then redeploy."
+      }
+    });
+  } catch (error) {
+    const description = describeMenuDatabaseError(error);
+    return NextResponse.json({ error: description.message, detail: description.detail }, { status: 503 });
+  }
 }
 
 export async function PUT(request: Request) {
@@ -28,7 +43,8 @@ export async function PUT(request: Request) {
     return NextResponse.json(saved);
   } catch (error) {
     console.error("Menu save failed", error);
-    return NextResponse.json({ error: "Menu could not be saved. Please check the database connection and try again." }, { status: 500 });
+    const description = describeMenuDatabaseError(error);
+    return NextResponse.json({ error: description.message, detail: description.detail, code: description.code }, { status: 503 });
   }
 }
 

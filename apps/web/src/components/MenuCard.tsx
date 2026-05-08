@@ -11,7 +11,6 @@ export function MenuCard({ item, onAdd, compact = false }: { item: MenuItem; onA
       <FoodImage label={item.name} src={item.image} className={compact ? "min-h-48" : "min-h-48 sm:min-h-full"} />
       <div className={`flex flex-col p-5 ${compact ? "min-h-0" : "min-h-64"}`}>
         <div className="flex flex-wrap gap-2">
-          {item.halal ? <Badge tone="green">Halal</Badge> : null}
           {item.popular ? <Badge>Popular</Badge> : null}
           {item.recommended ? <Badge tone="dark">Chef pick</Badge> : null}
         </div>
@@ -23,7 +22,7 @@ export function MenuCard({ item, onAdd, compact = false }: { item: MenuItem; onA
           <p className="shrink-0 font-semibold text-clay">{money(item.pricePence)}</p>
         </div>
         <div className="mt-4 flex flex-wrap gap-2 text-xs text-date/55">
-          <span>Spice {item.spiceLevel}/3</span>
+          {item.spiceLevel ? <span>Spice {item.spiceLevel}/3</span> : null}
           <span>{item.prepMinutes} min</span>
           <span>{item.allergens.length ? `Allergens: ${item.allergens.join(", ")}` : "No listed allergens"}</span>
         </div>

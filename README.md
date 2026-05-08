@@ -77,9 +77,9 @@ MINIMUM_ORDER_PENCE           Default 1200
 
 For Vercel, `NEXT_PUBLIC_SITE_URL` is recommended for correct social preview URLs, but the app also falls back to Vercel's `VERCEL_URL` so the homepage can render without it. Stripe and Google variables are optional for the temporary demo path; missing values fall back to demo checkout and manual Google review links.
 
-Menu management is database-backed when `DATABASE_URL` is set. Run `PATH="$PWD/tools:$PATH" ./tools/pnpm db:push` after pulling schema changes so the `MenuItem.published` column exists before staff publish dishes. If `DATABASE_URL` is missing, the app keeps a local JSON fallback for development previews only; that fallback is not durable on Vercel.
+Menu management requires `DATABASE_URL` for real saving. If it is missing, the admin menu page shows a setup message and save/publish buttons are disabled. Run `PATH="$PWD/tools:$PATH" ./tools/pnpm db:push` after adding the database URL so the `MenuItem.published` column exists before staff publish dishes. Local JSON fallbacks are only for read-only development previews and are not used as a production menu-saving workaround.
 
-Admin menu images are uploaded through `/api/admin/menu/upload`, validated as JPG/PNG/WebP up to 1.5MB, and stored with the menu item as a data URL. This avoids Vercel filesystem storage. For a larger production catalogue, replace that endpoint with Vercel Blob, Cloudinary, or Supabase Storage while keeping the saved `image` URL field.
+Admin menu images are uploaded through `/api/admin/menu/upload`, validated as JPG/PNG/WebP up to 5MB, resized in the browser where possible, and stored with the menu item as a data URL. This avoids Vercel filesystem storage. For a larger production catalogue, replace that endpoint with Vercel Blob, Cloudinary, or Supabase Storage while keeping the saved `image` URL field.
 
 Admin login:
 
