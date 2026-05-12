@@ -170,6 +170,7 @@ function dbItemToMenuItem(item: any): MenuItem {
 }
 
 async function ensureDefaultCategories() {
+  await ensureMenuSchema();
   await Promise.all(
     menuCategories.map((category) =>
       db.menuCategory.upsert({
@@ -184,6 +185,88 @@ async function ensureDefaultCategories() {
       })
     )
   );
+}
+
+async function ensureMenuSchema() {
+  await db.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "MenuCategory" (
+      "id" TEXT PRIMARY KEY,
+      "name" TEXT NOT NULL,
+      "slug" TEXT NOT NULL UNIQUE,
+      "description" TEXT NOT NULL DEFAULT '',
+      "sortOrder" INTEGER NOT NULL DEFAULT 0,
+      "hidden" BOOLEAN NOT NULL DEFAULT false
+    );
+  `);
+
+  await db.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "MenuItem" (
+      "id" TEXT PRIMARY KEY,
+      "categoryId" TEXT NOT NULL,
+      "name" TEXT NOT NULL,
+      "slug" TEXT NOT NULL UNIQUE,
+      "description" TEXT NOT NULL DEFAULT '',
+      "pricePence" INTEGER NOT NULL DEFAULT 0,
+      "image" TEXT NOT NULL DEFAULT '',
+      "allergens" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+      "spiceLevel" INTEGER NOT NULL DEFAULT 0,
+      "halal" BOOLEAN NOT NULL DEFAULT true,
+      "available" BOOLEAN NOT NULL DEFAULT true,
+      "published" BOOLEAN NOT NULL DEFAULT false,
+      "hidden" BOOLEAN NOT NULL DEFAULT false,
+      "popular" BOOLEAN NOT NULL DEFAULT false,
+      "recommended" BOOLEAN NOT NULL DEFAULT false,
+      "prepMinutes" INTEGER NOT NULL DEFAULT 15,
+      "sortOrder" INTEGER NOT NULL DEFAULT 0,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await db.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "MenuItemOption" (
+      "id" TEXT PRIMARY KEY,
+      "menuItemId" TEXT NOT NULL,
+      "name" TEXT NOT NULL,
+      "priceDeltaPence" INTEGER NOT NULL DEFAULT 0
+    );
+  `);
+
+  await db.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "AddOn" (
+      "id" TEXT PRIMARY KEY,
+      "menuItemId" TEXT NOT NULL,
+      "name" TEXT NOT NULL,
+      "pricePence" INTEGER NOT NULL DEFAULT 0
+    );
+  `);
+
+  const menuItemColumns = [
+    `"published" BOOLEAN NOT NULL DEFAULT false`,
+    `"hidden" BOOLEAN NOT NULL DEFAULT false`,
+    `"popular" BOOLEAN NOT NULL DEFAULT false`,
+    `"recommended" BOOLEAN NOT NULL DEFAULT false`,
+    `"halal" BOOLEAN NOT NULL DEFAULT true`,
+    `"available" BOOLEAN NOT NULL DEFAULT true`,
+    `"image" TEXT NOT NULL DEFAULT ''`,
+    `"description" TEXT NOT NULL DEFAULT ''`,
+    `"allergens" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[]`,
+    `"spiceLevel" INTEGER NOT NULL DEFAULT 0`,
+    `"prepMinutes" INTEGER NOT NULL DEFAULT 15`,
+    `"sortOrder" INTEGER NOT NULL DEFAULT 0`,
+    `"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP`,
+    `"updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP`
+  ];
+
+  for (const column of menuItemColumns) {
+    await db.$executeRawUnsafe(`ALTER TABLE "MenuItem" ADD COLUMN IF NOT EXISTS ${column};`);
+  }
+
+  await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "MenuCategory_slug_key" ON "MenuCategory"("slug");`);
+  await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "MenuItem_slug_key" ON "MenuItem"("slug");`);
+  await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "MenuItem_categoryId_idx" ON "MenuItem"("categoryId");`);
+  await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "MenuItemOption_menuItemId_idx" ON "MenuItemOption"("menuItemId");`);
+  await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "AddOn_menuItemId_idx" ON "AddOn"("menuItemId");`);
 }
 
 async function seedRealMenuIfEmpty() {
