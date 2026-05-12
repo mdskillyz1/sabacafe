@@ -100,7 +100,7 @@ async function main() {
         popular: item.popular,
         recommended: item.recommended,
         prepMinutes: item.prepMinutes,
-        sortOrder: index
+        sortOrder: item.sortOrder ?? index
       },
       create: {
         id: item.id,
@@ -118,7 +118,7 @@ async function main() {
         popular: item.popular,
         recommended: item.recommended,
         prepMinutes: item.prepMinutes,
-        sortOrder: index,
+        sortOrder: item.sortOrder ?? index,
         options: {
           create: item.options.map((option) => ({
             name: option.name,

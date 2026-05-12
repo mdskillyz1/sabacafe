@@ -5,8 +5,8 @@ export default function AdminMenuPage() {
   return (
     <AdminPageShell
       eyebrow="Menu manager"
-      title="Add dishes, save drafts, then publish to customers."
-      description="Nothing appears on the public menu until staff press Publish. Use this screen to manage names, descriptions, prices, images, allergens, spice levels, halal labels, availability, popular badges, size options, add-ons, and prep times."
+      title="Manage the Saba Cafe menu."
+      description="Nothing appears on the public menu until staff press Publish. Use this screen to manage dish names, descriptions, prices, images, allergens, optional spice levels, availability, popular badges, size options, add-ons, and prep times."
       breadcrumbs={[{ label: "Menu" }]}
       backLabel="Back to overview"
     >

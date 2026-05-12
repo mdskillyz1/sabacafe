@@ -20,7 +20,7 @@ type MenuStore = {
 
 const blankItem = (): MenuItem => ({
   id: crypto.randomUUID(),
-  categoryId: "starters",
+  categoryId: "breakfast",
   name: "",
   slug: "",
   description: "",
@@ -365,22 +365,22 @@ export function AdminMenuEditor() {
   const saveDisabled = saving || store.setup?.saveEnabled === false;
 
   return (
-    <section className="mt-8 space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-date/10 bg-white p-5 shadow-sm">
-        <div>
+    <section className="mt-8 min-w-0 space-y-6">
+      <div className="flex flex-col gap-4 rounded-lg border border-date/10 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
           <p className="text-sm font-semibold text-date">{store.published ? "Published" : "Draft only"}</p>
           <p className="text-sm text-date/60">
             {store.items.length} item{store.items.length === 1 ? "" : "s"} in admin menu · {publishedCount} published · {draftCount} draft
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={addItem} className="focus-ring inline-flex items-center gap-2 rounded-full border border-date/15 px-4 py-3 font-semibold text-date">
+        <div className="grid w-full gap-2 sm:grid-cols-3 lg:w-auto">
+          <button type="button" onClick={addItem} className="focus-ring inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-date/15 px-4 py-3 font-semibold text-date">
             <Plus size={17} /> Add item
           </button>
-          <button type="button" onClick={() => save(false)} disabled={saveDisabled} className="focus-ring inline-flex items-center gap-2 rounded-full bg-date px-4 py-3 font-semibold text-cream disabled:opacity-60">
+          <button type="button" onClick={() => save(false)} disabled={saveDisabled} className="focus-ring inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-date px-4 py-3 font-semibold text-cream disabled:opacity-60">
             <Save size={17} /> Save draft
           </button>
-          <button type="button" onClick={() => save(true)} disabled={saveDisabled || !store.items.length} className="focus-ring inline-flex items-center gap-2 rounded-full bg-mint px-4 py-3 font-semibold text-white disabled:opacity-60">
+          <button type="button" onClick={() => save(true)} disabled={saveDisabled || !store.items.length} className="focus-ring inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-mint px-4 py-3 font-semibold text-white disabled:opacity-60">
             <Send size={17} /> Publish
           </button>
         </div>

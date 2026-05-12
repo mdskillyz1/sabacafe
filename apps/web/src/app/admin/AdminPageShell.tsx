@@ -33,7 +33,7 @@ export function AdminPageShell({
   const trail = [{ label: "Overview", href: "/admin" }, ...breadcrumbs];
 
   return (
-    <main className={`mx-auto ${maxWidthClassName} px-4 py-8 sm:px-6 sm:py-12 lg:px-8`}>
+    <main className={`mx-auto ${maxWidthClassName} overflow-x-hidden px-4 py-8 sm:px-6 sm:py-12 lg:px-8`}>
       <div className="mb-6 flex flex-col gap-4 rounded-lg border border-date/10 bg-white/85 p-4 shadow-sm backdrop-blur sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <AdminBackButton fallbackHref={backHref} label={backLabel} />
@@ -58,7 +58,7 @@ export function AdminPageShell({
         </nav>
         <div>
           {eyebrow ? <p className="text-sm font-semibold uppercase tracking-[0.18em] text-clay">{eyebrow}</p> : null}
-          <h1 className="mt-2 font-display text-3xl font-semibold leading-tight text-date sm:text-5xl">{title}</h1>
+          <h1 className="mt-2 max-w-[22ch] break-words font-display text-3xl font-semibold leading-tight text-date sm:text-4xl lg:text-5xl">{title}</h1>
           {description ? <p className="mt-4 max-w-3xl leading-7 text-date/70">{description}</p> : null}
         </div>
       </div>

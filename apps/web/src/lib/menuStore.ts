@@ -1,6 +1,6 @@
 import { constants as fsConstants, promises as fs } from "fs";
 import path from "path";
-import { menuCategories, type MenuCategory, type MenuItem } from "@saba/shared";
+import { menuCategories, menuItems, type MenuCategory, type MenuItem } from "@saba/shared";
 import { prisma } from "@saba/database";
 import bundledMenuStore from "../../data/menu-store.json";
 
@@ -29,10 +29,10 @@ const candidateStorePaths = [
 ];
 
 const emptyStore = (): MenuStore => ({
-  published: false,
+  published: menuItems.length > 0,
   updatedAt: new Date().toISOString(),
   categories: menuCategories,
-  items: []
+  items: menuItems
 });
 
 const db = prisma as any;
@@ -186,10 +186,55 @@ async function ensureDefaultCategories() {
   );
 }
 
+async function seedRealMenuIfEmpty() {
+  const count = await db.menuItem.count();
+  if (count > 0 || !menuItems.length) return;
+
+  for (const [index, item] of menuItems.entries()) {
+    await db.menuItem.create({
+      data: {
+        id: item.id,
+        categoryId: item.categoryId,
+        name: item.name,
+        slug: item.slug,
+        description: item.description,
+        pricePence: item.pricePence,
+        image: item.image,
+        allergens: item.allergens,
+        spiceLevel: item.spiceLevel,
+        halal: true,
+        available: item.available,
+        published: true,
+        hidden: false,
+        popular: item.popular,
+        recommended: item.recommended,
+        prepMinutes: item.prepMinutes,
+        sortOrder: item.sortOrder ?? index,
+        options: {
+          create: item.options.map((option) => ({
+            name: option.name,
+            priceDeltaPence: option.priceDeltaPence
+          }))
+        },
+        addOns: {
+          create: item.addOns.map((addOn) => ({
+            name: addOn.name,
+            pricePence: addOn.pricePence
+          }))
+        }
+      }
+    });
+  }
+}
+
 async function readDatabaseMenuStore(): Promise<MenuStore> {
   await ensureDefaultCategories();
+  await seedRealMenuIfEmpty();
   const [categories, items] = await Promise.all([
-    db.menuCategory.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
+    db.menuCategory.findMany({
+      where: { id: { in: menuCategories.map((category) => category.id) } },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
+    }),
     db.menuItem.findMany({
       include: {
         options: true,
@@ -346,11 +391,12 @@ export async function readMenuStore(): Promise<MenuStore> {
   try {
     const raw = await readFirstAvailableStore();
     const parsed = JSON.parse(raw) as Partial<MenuStore>;
+    const items = parsed.items?.length ? parsed.items : menuItems;
     return {
-      published: Boolean(parsed.published),
+      published: Boolean(parsed.published || items.length),
       updatedAt: parsed.updatedAt ?? new Date().toISOString(),
-      categories: parsed.categories?.length ? parsed.categories : menuCategories,
-      items: parsed.items ?? []
+      categories: menuCategories,
+      items
     };
   } catch {
     return emptyStore();
