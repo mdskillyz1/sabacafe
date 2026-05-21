@@ -3,7 +3,13 @@ import { getMenu } from "@/lib/data";
 import { menuCategories } from "@saba/shared";
 import { describeMenuDatabaseError } from "@/lib/menuStore";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const acceptHeader = request.headers.get("accept") ?? "";
+
+  if (acceptHeader.includes("text/html") && !acceptHeader.includes("application/json")) {
+    return NextResponse.redirect(new URL("/menu", request.url));
+  }
+
   try {
     return NextResponse.json(await getMenu());
   } catch (error) {
