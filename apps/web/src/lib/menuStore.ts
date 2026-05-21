@@ -36,6 +36,16 @@ const emptyStore = (): MenuStore => ({
 });
 
 const db = prisma as any;
+const legacyGroupedMenuItemIds = [
+  "liver-or-kidney",
+  "quraac-somali-with-odkac-beef-suqaar",
+  "quraac-somali-with-liver-kidney-chicken-suqaar",
+  "soup-or-xulbo",
+  "beef-suqaar-or-steak",
+  "chicken-suqaar-or-steak-or-leg",
+  "rize-pasta-soor",
+  "coke-pepsi-rio-7up"
+];
 
 function databaseMenuEnabled() {
   return Boolean(process.env.DATABASE_URL);
@@ -269,50 +279,70 @@ async function ensureMenuSchema() {
   await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "AddOn_menuItemId_idx" ON "AddOn"("menuItemId");`);
 }
 
-async function seedRealMenuIfEmpty() {
-  const count = await db.menuItem.count();
-  if (count > 0 || !menuItems.length) return;
+async function createImportedMenuItem(item: MenuItem & { sortOrder?: number }, index: number) {
+  await db.menuItem.create({
+    data: {
+      id: item.id,
+      categoryId: item.categoryId,
+      name: item.name,
+      slug: item.slug,
+      description: item.description,
+      pricePence: item.pricePence,
+      image: item.image,
+      allergens: item.allergens,
+      spiceLevel: item.spiceLevel,
+      halal: true,
+      available: item.available,
+      published: true,
+      hidden: false,
+      popular: item.popular,
+      recommended: item.recommended,
+      prepMinutes: item.prepMinutes,
+      sortOrder: item.sortOrder ?? index,
+      options: {
+        create: item.options.map((option) => ({
+          name: option.name,
+          priceDeltaPence: option.priceDeltaPence
+        }))
+      },
+      addOns: {
+        create: item.addOns.map((addOn) => ({
+          name: addOn.name,
+          pricePence: addOn.pricePence
+        }))
+      }
+    }
+  });
+}
+
+async function syncImportedMenuItems() {
+  if (!menuItems.length) return;
+
+  await db.menuItem.deleteMany({
+    where: {
+      id: {
+        in: legacyGroupedMenuItemIds
+      }
+    }
+  });
+
+  const existingItems = await db.menuItem.findMany({
+    select: {
+      id: true
+    }
+  });
+  const existingIds = new Set(existingItems.map((item: { id: string }) => item.id));
 
   for (const [index, item] of menuItems.entries()) {
-    await db.menuItem.create({
-      data: {
-        id: item.id,
-        categoryId: item.categoryId,
-        name: item.name,
-        slug: item.slug,
-        description: item.description,
-        pricePence: item.pricePence,
-        image: item.image,
-        allergens: item.allergens,
-        spiceLevel: item.spiceLevel,
-        halal: true,
-        available: item.available,
-        published: true,
-        hidden: false,
-        popular: item.popular,
-        recommended: item.recommended,
-        prepMinutes: item.prepMinutes,
-        sortOrder: item.sortOrder ?? index,
-        options: {
-          create: item.options.map((option) => ({
-            name: option.name,
-            priceDeltaPence: option.priceDeltaPence
-          }))
-        },
-        addOns: {
-          create: item.addOns.map((addOn) => ({
-            name: addOn.name,
-            pricePence: addOn.pricePence
-          }))
-        }
-      }
-    });
+    if (!existingIds.has(item.id)) {
+      await createImportedMenuItem(item, index);
+    }
   }
 }
 
 async function readDatabaseMenuStore(): Promise<MenuStore> {
   await ensureDefaultCategories();
-  await seedRealMenuIfEmpty();
+  await syncImportedMenuItems();
   const [categories, items] = await Promise.all([
     db.menuCategory.findMany({
       where: { id: { in: menuCategories.map((category) => category.id) } },
@@ -474,7 +504,10 @@ export async function readMenuStore(): Promise<MenuStore> {
   try {
     const raw = await readFirstAvailableStore();
     const parsed = JSON.parse(raw) as Partial<MenuStore>;
-    const items = parsed.items?.length ? parsed.items : menuItems;
+    const isBundledFallback =
+      parsed.items?.some((item) => legacyGroupedMenuItemIds.includes(item.id)) ||
+      parsed.items?.length !== menuItems.length;
+    const items = parsed.items?.length && !isBundledFallback ? parsed.items : menuItems;
     return {
       published: Boolean(parsed.published || items.length),
       updatedAt: parsed.updatedAt ?? new Date().toISOString(),
