@@ -5,9 +5,22 @@ import { Award, Clock, MapPin, ShieldCheck, Star, UtensilsCrossed } from "lucide
 import { Badge } from "@/components/Badge";
 import { FoodImage } from "@/components/FoodImage";
 import { BookingWidget } from "./BookingWidget";
-import { businessInfo, googleReviewSummary, openingHours } from "@saba/shared";
+import { getMenu } from "@/lib/data";
+import { businessInfo, googleReviewSummary, money, openingHours, type MenuItem } from "@saba/shared";
 
-export default function HomePage() {
+async function getFeaturedItems() {
+  try {
+    const menu = await getMenu();
+    const items = menu.items.filter((item) => item.available && item.published && !item.hidden);
+    const featured = items.filter((item) => item.popular || item.recommended);
+    return (featured.length ? featured : items).slice(0, 6);
+  } catch {
+    return [] as MenuItem[];
+  }
+}
+
+export default async function HomePage() {
+  const featuredItems = await getFeaturedItems();
   const trustCards: [string, LucideIcon][] = [
     ["Halal kitchen", ShieldCheck],
     ["Fresh prep daily", UtensilsCrossed],
@@ -64,23 +77,49 @@ export default function HomePage() {
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-clay">Featured dishes</p>
-            <h2 className="mt-2 font-display text-4xl font-semibold text-date">Official menu coming from Saba Cafe.</h2>
+            <h2 className="mt-2 font-display text-4xl font-semibold text-date">Fresh favourites from the Saba Cafe menu.</h2>
           </div>
-          <Link href="/order" className="font-semibold text-mint">
-            Check ordering
+          <Link href="/menu" className="font-semibold text-mint">
+            View full menu
           </Link>
         </div>
-        <div className="mt-8 rounded-lg border border-date/10 bg-white p-8 shadow-sm">
-          <h3 className="font-display text-3xl font-semibold text-date">Menu not available yet</h3>
-          <p className="mt-3 max-w-2xl leading-7 text-date/70">
-            The Saba Cafe team can add starters, breakfast, mains, sides, hot drinks, cold drinks, and sauces from the admin
-            dashboard, then press Publish to make the menu live for customers.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/menu" className="rounded-full bg-date px-5 py-3 font-semibold text-cream">View Menu</Link>
-            <a href={businessInfo.phoneHref} className="rounded-full border border-date/15 px-5 py-3 font-semibold text-date">Call {businessInfo.phone}</a>
+
+        {featuredItems.length ? (
+          <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {featuredItems.map((item) => (
+              <article key={item.id} className="overflow-hidden rounded-lg border border-date/10 bg-white shadow-sm">
+                <FoodImage label={item.name} src={item.image} className="min-h-44" />
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="font-display text-2xl font-semibold text-date">{item.name}</h3>
+                      <p className="mt-2 line-clamp-2 text-sm leading-6 text-date/70">{item.description}</p>
+                    </div>
+                    <p className="shrink-0 font-semibold text-clay">{money(item.pricePence)}</p>
+                  </div>
+                  <Link href="/order" className="mt-5 inline-flex rounded-full bg-date px-5 py-3 text-sm font-semibold text-cream">
+                    Order this
+                  </Link>
+                </div>
+              </article>
+            ))}
           </div>
-        </div>
+        ) : (
+          <div className="mt-8 rounded-lg border border-date/10 bg-white p-8 shadow-sm">
+            <h3 className="font-display text-3xl font-semibold text-date">Menu is being refreshed</h3>
+            <p className="mt-3 max-w-2xl leading-7 text-date/70">
+              Please view the full menu or call Saba Cafe for today&apos;s freshly prepared Somali dishes.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/menu" className="rounded-full bg-date px-5 py-3 font-semibold text-cream">
+                View Menu
+              </Link>
+              <a href={businessInfo.phoneHref} className="rounded-full border border-date/15 px-5 py-3 font-semibold text-date">
+                Call {businessInfo.phone}
+              </a>
+            </div>
+          </div>
+        )}
       </section>
 
       <section id="reviews" className="bg-white py-16">
