@@ -1,9 +1,14 @@
 export type FulfilmentType = "PICKUP" | "DELIVERY";
-export type PaymentStatus = "PENDING" | "REQUIRES_ACTION" | "PAID" | "FAILED" | "REFUNDED";
+export type OrderType = "DINE_IN" | "COLLECTION" | "DELIVERY";
+export type PaymentMethod = "STRIPE_ONLINE" | "PAY_IN_STORE" | "CASH_ON_COLLECTION" | "CASH_ON_DELIVERY";
+export type PaymentStatus = "PENDING" | "REQUIRES_ACTION" | "PAID" | "FAILED" | "REFUNDED" | "PAY_IN_STORE";
 export type OrderStatus =
   | "RECEIVED"
+  | "ACCEPTED"
   | "PREPARING"
+  | "READY"
   | "READY_FOR_PICKUP"
+  | "SERVED"
   | "OUT_FOR_DELIVERY"
   | "COMPLETED"
   | "CANCELLED";
@@ -65,7 +70,12 @@ export type CheckoutInput = {
   email: string;
   phone: string;
   fulfilmentType: FulfilmentType;
+  orderType?: OrderType;
+  paymentMethod?: PaymentMethod;
+  tableId?: string;
+  tableNumber?: string;
   addressLine1?: string;
+  addressLine2?: string;
   postcode?: string;
   deliveryNotes?: string;
   scheduledFor?: string;
@@ -76,9 +86,16 @@ export type CheckoutInput = {
 export type OperationsSettings = {
   pickupEnabled: boolean;
   deliveryEnabled: boolean;
+  dineInEnabled?: boolean;
+  stripeEnabled?: boolean;
+  payInStoreEnabled?: boolean;
+  cashOnCollectionEnabled?: boolean;
+  cashOnDeliveryEnabled?: boolean;
   deliveryRadiusMiles: number;
   deliveryFeePerMilePence: number;
   originPostcode: string;
+  minimumOrderPence?: number;
+  prepTimeMinutes?: number;
 };
 
 export type BusinessSocialLinks = {
@@ -128,6 +145,7 @@ export type RestaurantTable = {
   name: string;
   capacity: number;
   active: boolean;
+  qrCodeUrl?: string;
 };
 
 export type BookingAvailabilityRule = {

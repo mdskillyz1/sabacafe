@@ -218,7 +218,7 @@ export function AdminBookingsManager() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-display text-3xl font-semibold text-date">Table management</h2>
-            <p className="text-sm text-date/60">Active tables are used by the availability engine.</p>
+            <p className="text-sm text-date/60">Active tables are used by bookings and QR dine-in ordering.</p>
           </div>
           <button
             type="button"
@@ -230,10 +230,11 @@ export function AdminBookingsManager() {
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           {store.tables.map((table) => (
-            <div key={table.id} className="grid gap-3 rounded-md border border-date/10 p-4 sm:grid-cols-[1fr_120px_auto_auto]">
+            <div key={table.id} className="grid gap-3 rounded-md border border-date/10 p-4 sm:grid-cols-[1fr_120px_auto_auto_auto]">
               <input value={table.name} onChange={(event) => updateTable(table.id, { name: event.target.value })} className="focus-ring rounded-md border border-date/15 px-3 py-3" />
               <input type="number" min={1} value={table.capacity} onChange={(event) => updateTable(table.id, { capacity: Number(event.target.value) })} className="focus-ring rounded-md border border-date/15 px-3 py-3" />
               <label className="flex items-center gap-2 text-sm font-semibold text-date/70"><input type="checkbox" checked={table.active} onChange={(event) => updateTable(table.id, { active: event.target.checked })} /> Active</label>
+              <a href={`/api/admin/tables/${table.id}/qr`} className="rounded-full border border-date/15 px-3 py-2 text-center text-xs font-semibold text-date">QR</a>
               <button onClick={() => setStore((current) => ({ ...current, tables: current.tables.filter((row) => row.id !== table.id) }))} className="text-red-700"><Trash2 size={18} /></button>
             </div>
           ))}

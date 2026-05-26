@@ -21,8 +21,11 @@ enum FulfilmentType {
 
 enum OrderStatus {
   RECEIVED
+  ACCEPTED
   PREPARING
+  READY
   READY_FOR_PICKUP
+  SERVED
   OUT_FOR_DELIVERY
   COMPLETED
   CANCELLED
@@ -34,6 +37,20 @@ enum PaymentStatus {
   PAID
   FAILED
   REFUNDED
+  PAY_IN_STORE
+}
+
+enum OrderType {
+  DINE_IN
+  COLLECTION
+  DELIVERY
+}
+
+enum PaymentMethod {
+  STRIPE_ONLINE
+  PAY_IN_STORE
+  CASH_ON_COLLECTION
+  CASH_ON_DELIVERY
 }
 
 enum ReviewStatus {
@@ -181,17 +198,25 @@ model Cart {
 model Order {
   id                String          @id @default(cuid())
   orderNumber       String          @unique
+  trackingCode      String?         @unique
   userId            String?
   user              User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  orderType         OrderType       @default(COLLECTION)
+  tableId           String?
+  tableNumber       String?
   customerName      String
+  customerEmail     String?
+  customerPhone     String?
   email             String
   phone             String
   fulfilmentType    FulfilmentType
   addressId         String?
   address           Address?        @relation(fields: [addressId], references: [id])
   deliveryNotes     String?
+  deliveryAddress   Json?
   scheduledFor      DateTime?
   status            OrderStatus     @default(RECEIVED)
+  paymentMethod     PaymentMethod   @default(STRIPE_ONLINE)
   paymentStatus     PaymentStatus   @default(PENDING)
   subtotalPence     Int
   discountPence     Int             @default(0)
@@ -199,6 +224,7 @@ model Order {
   vatPence          Int             @default(0)
   totalPence        Int
   promoCode         String?
+  notes             String?
   stripePaymentIntentId String?
   items             OrderItem[]
   payment           Payment?
@@ -206,6 +232,10 @@ model Order {
   loyaltyPoints     LoyaltyPoint[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
+
+  @@index([orderType])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model OrderItem {

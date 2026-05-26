@@ -1,38 +1,61 @@
 import { NextResponse } from "next/server";
-import { createDemoOrder, getDemoOrders } from "@/lib/data";
+import { createOrder, getOrders } from "@/lib/orderStore";
 import { quoteDelivery } from "@/lib/delivery";
 import { getPublishedMenu } from "@/lib/menuStore";
 import { readOperationsSettings } from "@/lib/operationsSettings";
 import { calculatePrice, validatePostcode, type CheckoutInput } from "@saba/shared";
 
-export async function GET() {
-  return NextResponse.json({ orders: await getDemoOrders() });
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  return NextResponse.json({
+    orders: await getOrders({
+      orderType: url.searchParams.get("orderType") ?? undefined,
+      status: url.searchParams.get("status") ?? undefined,
+      paymentStatus: url.searchParams.get("paymentStatus") ?? undefined
+    })
+  });
 }
 
 export async function POST(request: Request) {
   const input = (await request.json()) as CheckoutInput;
+  const orderType = input.orderType ?? (input.fulfilmentType === "DELIVERY" ? "DELIVERY" : "COLLECTION");
   if (!input.items?.length) return NextResponse.json({ error: "Cart is empty." }, { status: 400 });
-  if (!input.customerName || !input.email || !input.phone) {
-    return NextResponse.json({ error: "Customer details are required." }, { status: 400 });
+  if (!input.customerName || (orderType !== "DINE_IN" && !input.phone)) {
+    return NextResponse.json({ error: "Required customer details are missing." }, { status: 400 });
   }
   const settings = await readOperationsSettings();
-  if (input.fulfilmentType === "PICKUP" && !settings.pickupEnabled) {
-    return NextResponse.json({ error: "Pickup is currently switched off." }, { status: 400 });
+  if (orderType === "DINE_IN" && settings.dineInEnabled === false) {
+    return NextResponse.json({ error: "Dine-in QR ordering is currently switched off." }, { status: 400 });
   }
-  if (input.fulfilmentType === "DELIVERY" && !settings.deliveryEnabled) {
+  if (orderType === "COLLECTION" && !settings.pickupEnabled) {
+    return NextResponse.json({ error: "Collection is currently switched off." }, { status: 400 });
+  }
+  if (orderType === "DELIVERY" && !settings.deliveryEnabled) {
     return NextResponse.json({ error: "Delivery is currently switched off." }, { status: 400 });
   }
-  if (input.fulfilmentType === "DELIVERY" && !validatePostcode(input.postcode)) {
+  if (orderType === "DELIVERY" && !validatePostcode(input.postcode)) {
     return NextResponse.json({ error: "Delivery postcode is outside the configured radius." }, { status: 400 });
   }
   const deliveryQuote =
-    input.fulfilmentType === "DELIVERY" ? await quoteDelivery(input.postcode ?? "", settings) : { allowed: true, deliveryFeePence: 0 };
+    orderType === "DELIVERY" ? await quoteDelivery(input.postcode ?? "", settings) : { allowed: true, deliveryFeePence: 0 };
   if (!deliveryQuote.allowed) {
     return NextResponse.json({ error: deliveryQuote.reason ?? "This address is outside our delivery radius." }, { status: 400 });
   }
   const menu = await getPublishedMenu();
-  const totals = calculatePrice(input.items, menu.items, input.fulfilmentType, input.promoCode, 0.2, 1200, deliveryQuote.deliveryFeePence ?? 0);
-  if (!totals.minimumMet) return NextResponse.json({ error: "Minimum order value has not been met." }, { status: 400 });
-  const order = await createDemoOrder(input);
-  return NextResponse.json(order, { status: 201 });
+  const totals = calculatePrice(
+    input.items,
+    menu.items,
+    orderType === "DELIVERY" ? "DELIVERY" : "PICKUP",
+    input.promoCode,
+    0.2,
+    settings.minimumOrderPence ?? 1200,
+    deliveryQuote.deliveryFeePence ?? 0
+  );
+  if (orderType !== "DINE_IN" && !totals.minimumMet) return NextResponse.json({ error: "Minimum order value has not been met." }, { status: 400 });
+  try {
+    const order = await createOrder({ ...input, orderType, fulfilmentType: orderType === "DELIVERY" ? "DELIVERY" : "PICKUP" });
+    return NextResponse.json(order, { status: 201 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Order could not be created." }, { status: 400 });
+  }
 }

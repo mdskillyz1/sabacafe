@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Bike, CheckCircle2, MapPin, Save, Store, Truck } from "lucide-react";
+import { Bike, CheckCircle2, CreditCard, MapPin, QrCode, Save, Store, Truck, type LucideIcon } from "lucide-react";
 import { businessInfo, money, type OperationsSettings } from "@saba/shared";
 
 function StatusPill({ enabled }: { enabled: boolean }) {
@@ -19,7 +19,7 @@ function ToggleCard({
   enabled,
   onChange
 }: {
-  icon: typeof Store;
+  icon: LucideIcon;
   title: string;
   description: string;
   enabled: boolean;
@@ -51,9 +51,16 @@ export function AdminOperationsSettings() {
   const [settings, setSettings] = useState<OperationsSettings>({
     pickupEnabled: true,
     deliveryEnabled: true,
+    dineInEnabled: true,
+    stripeEnabled: true,
+    payInStoreEnabled: true,
+    cashOnCollectionEnabled: true,
+    cashOnDeliveryEnabled: false,
     deliveryRadiusMiles: 5,
     deliveryFeePerMilePence: 0,
-    originPostcode: businessInfo.deliveryOriginPostcode
+    originPostcode: businessInfo.deliveryOriginPostcode,
+    minimumOrderPence: 1200,
+    prepTimeMinutes: 15
   });
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
@@ -86,15 +93,22 @@ export function AdminOperationsSettings() {
     const saved = await response.json();
     setSettings(saved);
     setSaving(false);
-    setMessage("Saved. Customer checkout now uses these pickup and delivery rules.");
+    setMessage("Saved. Customer checkout now uses these dine-in, collection, delivery, and payment rules.");
   }
 
   return (
     <section className="mt-8 space-y-6">
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
+        <ToggleCard
+          icon={QrCode}
+          title="Dine-in QR"
+          description="Allow customers at tables to scan a QR code and order to their table."
+          enabled={settings.dineInEnabled !== false}
+          onChange={(enabled) => setSettings((current) => ({ ...current, dineInEnabled: enabled }))}
+        />
         <ToggleCard
           icon={Store}
-          title="Pickup"
+          title="Collection"
           description="Allow customers to choose collection from Saba Cafe."
           enabled={settings.pickupEnabled}
           onChange={(enabled) => setSettings((current) => ({ ...current, pickupEnabled: enabled }))}
@@ -105,6 +119,37 @@ export function AdminOperationsSettings() {
           description="Allow customers inside the delivery radius to request delivery."
           enabled={settings.deliveryEnabled}
           onChange={(enabled) => setSettings((current) => ({ ...current, deliveryEnabled: enabled }))}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <ToggleCard
+          icon={CreditCard}
+          title="Stripe online"
+          description="Allow customers to pay online by card through Stripe."
+          enabled={settings.stripeEnabled !== false}
+          onChange={(enabled) => setSettings((current) => ({ ...current, stripeEnabled: enabled }))}
+        />
+        <ToggleCard
+          icon={Store}
+          title="Pay in store"
+          description="Allow dine-in customers to send the order and pay at the counter."
+          enabled={settings.payInStoreEnabled !== false}
+          onChange={(enabled) => setSettings((current) => ({ ...current, payInStoreEnabled: enabled }))}
+        />
+        <ToggleCard
+          icon={Store}
+          title="Cash collection"
+          description="Allow collection customers to pay when collecting."
+          enabled={settings.cashOnCollectionEnabled !== false}
+          onChange={(enabled) => setSettings((current) => ({ ...current, cashOnCollectionEnabled: enabled }))}
+        />
+        <ToggleCard
+          icon={Bike}
+          title="Cash delivery"
+          description="Allow delivery customers to pay cash on delivery."
+          enabled={settings.cashOnDeliveryEnabled === true}
+          onChange={(enabled) => setSettings((current) => ({ ...current, cashOnDeliveryEnabled: enabled }))}
         />
       </div>
 
@@ -143,6 +188,33 @@ export function AdminOperationsSettings() {
                   className="focus-ring w-full border-0 px-4 py-3 font-normal"
                 />
                 <span className="flex items-center border-l border-date/10 px-4 text-sm text-date/55">miles</span>
+              </div>
+            </label>
+            <label className="text-sm font-semibold text-date/70">
+              Minimum order
+              <div className="mt-1 flex overflow-hidden rounded-md border border-date/15 bg-white">
+                <span className="flex items-center border-r border-date/10 px-4 text-sm text-date/55">£</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={((settings.minimumOrderPence ?? 1200) / 100).toString()}
+                  onChange={(event) => setSettings((current) => ({ ...current, minimumOrderPence: Math.round(Number(event.target.value) * 100) }))}
+                  className="focus-ring w-full border-0 px-4 py-3 font-normal"
+                />
+              </div>
+            </label>
+            <label className="text-sm font-semibold text-date/70">
+              Prep estimate
+              <div className="mt-1 flex overflow-hidden rounded-md border border-date/15 bg-white">
+                <input
+                  type="number"
+                  min={0}
+                  value={settings.prepTimeMinutes ?? 15}
+                  onChange={(event) => setSettings((current) => ({ ...current, prepTimeMinutes: Number(event.target.value) }))}
+                  className="focus-ring w-full border-0 px-4 py-3 font-normal"
+                />
+                <span className="flex items-center border-l border-date/10 px-4 text-sm text-date/55">mins</span>
               </div>
             </label>
           </div>

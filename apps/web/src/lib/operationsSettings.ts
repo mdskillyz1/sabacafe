@@ -13,9 +13,16 @@ const candidateSettingsPaths = [
 export const defaultOperationsSettings = (): OperationsSettings => ({
   pickupEnabled: true,
   deliveryEnabled: true,
+  dineInEnabled: true,
+  stripeEnabled: true,
+  payInStoreEnabled: true,
+  cashOnCollectionEnabled: true,
+  cashOnDeliveryEnabled: false,
   deliveryRadiusMiles: 5,
   deliveryFeePerMilePence: 0,
-  originPostcode: businessInfo.deliveryOriginPostcode
+  originPostcode: businessInfo.deliveryOriginPostcode,
+  minimumOrderPence: 1200,
+  prepTimeMinutes: 15
 });
 
 async function readFirstAvailableSettings() {
@@ -50,7 +57,9 @@ export async function readOperationsSettings(): Promise<OperationsSettings> {
       ...defaultOperationsSettings(),
       ...parsed,
       deliveryRadiusMiles: Number(parsed.deliveryRadiusMiles ?? 5),
-      deliveryFeePerMilePence: Number(parsed.deliveryFeePerMilePence ?? 0)
+      deliveryFeePerMilePence: Number(parsed.deliveryFeePerMilePence ?? 0),
+      minimumOrderPence: Number(parsed.minimumOrderPence ?? 1200),
+      prepTimeMinutes: Number(parsed.prepTimeMinutes ?? 15)
     };
   } catch {
     return defaultOperationsSettings();
@@ -61,9 +70,16 @@ export async function writeOperationsSettings(input: OperationsSettings) {
   const settings: OperationsSettings = {
     pickupEnabled: Boolean(input.pickupEnabled),
     deliveryEnabled: Boolean(input.deliveryEnabled),
+    dineInEnabled: input.dineInEnabled !== false,
+    stripeEnabled: input.stripeEnabled !== false,
+    payInStoreEnabled: input.payInStoreEnabled !== false,
+    cashOnCollectionEnabled: input.cashOnCollectionEnabled !== false,
+    cashOnDeliveryEnabled: input.cashOnDeliveryEnabled === true,
     deliveryRadiusMiles: Math.max(0, Number(input.deliveryRadiusMiles) || 5),
     deliveryFeePerMilePence: Math.max(0, Math.round(Number(input.deliveryFeePerMilePence) || 0)),
-    originPostcode: input.originPostcode || businessInfo.deliveryOriginPostcode
+    originPostcode: input.originPostcode || businessInfo.deliveryOriginPostcode,
+    minimumOrderPence: Math.max(0, Math.round(Number(input.minimumOrderPence) || 1200)),
+    prepTimeMinutes: Math.max(0, Math.round(Number(input.prepTimeMinutes) || 15))
   };
   const settingsPath = await writableSettingsPath();
   await fs.mkdir(path.dirname(settingsPath), { recursive: true });

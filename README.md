@@ -20,11 +20,11 @@ docs/
 ## Current Web Platform Scope
 
 - Website homepage with food-first hero, CTAs, featured dishes, reviews, hours, trust badges, booking, gallery, and web platform highlights.
-- Full menu and online ordering flow: `Menu → cart → pickup/delivery → payment → confirmation`.
+- Full menu and online ordering flow: `Menu → cart → dine-in QR / collection / delivery → payment → confirmation`.
 - Delivery postcode validation, minimum order value, promo code, delivery fee, VAT breakdown, and clear total.
-- Stripe PaymentIntent route plus explicit demo payment mode when Stripe keys are absent.
+- Stripe Checkout and PaymentIntent routes. Online card payments require Stripe keys; offline pay-in-store/cash methods can be enabled from admin.
 - Stripe webhook route for payment success/failure.
-- Admin order dashboard with status updates: received, preparing, ready, out for delivery, completed, cancelled.
+- Admin order dashboard and kitchen view with filters for dine-in, collection, delivery, payment state, and status updates.
 - Table booking flow with customer guest-size selection, admin-controlled availability, pending approvals, table management, blocked dates, blocked slots, and special hours.
 - Dynamic footer/business info system with admin-managed business name, copyright, address, email, phone, opening hours text, and social links.
 - Production-ready legal pages and footer compliance links for terms, privacy, cookies, refunds, delivery, accessibility, and contact.
@@ -75,7 +75,7 @@ VAT_RATE                      Default 0.20
 MINIMUM_ORDER_PENCE           Default 1200
 ```
 
-For Vercel, `NEXT_PUBLIC_SITE_URL` is recommended for correct social preview URLs, but the app also falls back to Vercel's `VERCEL_URL` so the homepage can render without it. Stripe and Google variables are optional for the temporary demo path; missing values fall back to demo checkout and manual Google review links.
+For Vercel, `NEXT_PUBLIC_SITE_URL` is recommended for correct social preview URLs, but the app also falls back to Vercel's `VERCEL_URL` so the homepage can render without it. Stripe and Google variables are optional for the temporary preview path. Missing Stripe values disable online card payment startup; orders are only marked paid after a confirmed Stripe webhook.
 
 Menu management requires `DATABASE_URL` for real saving. If it is missing, the admin menu page shows a setup message and save/publish buttons are disabled. Run `PATH="$PWD/tools:$PATH" ./tools/pnpm db:push` after adding the database URL so the `MenuItem.published` column exists before staff publish dishes. Local JSON fallbacks are only for read-only development previews and are not used as a production menu-saving workaround.
 
@@ -107,7 +107,17 @@ ADMIN_SESSION_TOKEN           Long random cookie secret for signed admin session
 3. Subscribe to `payment_intent.succeeded` and `payment_intent.payment_failed`.
 4. Add `STRIPE_WEBHOOK_SECRET`.
 
-Current behaviour: when Stripe keys are missing, `/api/checkout` returns `mode: "demo-paid"` and marks the demo order paid so the ordering flow is testable immediately.
+Current behaviour: when Stripe keys are missing, online card payment startup returns a setup error. Pay-in-store and cash options can still be enabled from admin. Orders are only marked `PAID` after Stripe confirms payment through the webhook.
+
+## QR Dine-In Ordering
+
+Saba Cafe supports three order types from the same menu and admin system:
+
+- Dine-in QR table ordering: `/order?type=dine-in&table=12`
+- Takeaway collection
+- Delivery
+
+Staff can manage booking/restaurant tables from `/admin/bookings`. Each active table has a QR download link that points customers to the ordering page with the table number pre-filled. Orders appear in `/admin/orders` and `/admin/kitchen` with the order type and table number clearly shown.
 
 ## Google Reviews Setup
 

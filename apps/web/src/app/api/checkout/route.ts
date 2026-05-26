@@ -1,37 +1,43 @@
 import { NextResponse } from "next/server";
-import { getDemoOrder, markDemoPayment } from "@/lib/data";
-import { trackWebsiteEvent } from "@/lib/eventStore";
+import { getOrder } from "@/lib/orderStore";
 import { getStripe } from "@/lib/stripe";
 
 export async function POST(request: Request) {
   const { orderId } = await request.json();
-  const order = await getDemoOrder(orderId);
+  const order = await getOrder(orderId);
   if (!order) return NextResponse.json({ error: "Order not found." }, { status: 404 });
+  if (order.paymentMethod !== "STRIPE_ONLINE") {
+    return NextResponse.json({ mode: "offline", paymentStatus: order.paymentStatus });
+  }
 
   const stripe = getStripe();
   if (!stripe) {
-    await markDemoPayment(orderId, "PAID");
-    await trackWebsiteEvent({ type: "order_complete", path: "/order" });
-    return NextResponse.json({
-      mode: "demo-paid",
-      paymentStatus: "PAID",
-      message: "STRIPE_SECRET_KEY is not configured, so this starter marks the demo order as paid."
-    });
+    return NextResponse.json({ error: "Online card payments are not configured yet. Please choose pay in store or cash if enabled." }, { status: 503 });
   }
 
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: order.totals.totalPence,
-    currency: "gbp",
-    automatic_payment_methods: { enabled: true },
+  const origin = request.headers.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    payment_method_types: ["card"],
+    line_items: order.items.map((item) => ({
+      quantity: item.quantity,
+      price_data: {
+        currency: "gbp",
+        unit_amount: item.unitPricePence,
+        product_data: { name: item.name }
+      }
+    })),
+    success_url: `${origin}/order-confirmation?order=${order.id}&payment=stripe-success`,
+    cancel_url: `${origin}/order?payment=cancelled`,
     metadata: {
       orderId: order.id,
       orderNumber: order.orderNumber
     }
   });
   return NextResponse.json({
-    mode: "stripe-payment-intent",
-    clientSecret: paymentIntent.client_secret,
-    paymentIntentId: paymentIntent.id,
-    paymentStatus: paymentIntent.status
+    mode: "stripe-checkout",
+    url: session.url,
+    sessionId: session.id,
+    paymentStatus: order.paymentStatus
   });
 }

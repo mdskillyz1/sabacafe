@@ -35,6 +35,7 @@ const kpiIcons = [PoundSterling, TrendingUp, CalendarDays, MousePointerClick, Cr
 const adminLinks = [
   ["Menu", "/admin/menu"],
   ["Orders", "/admin/orders"],
+  ["Kitchen", "/admin/kitchen"],
   ["Bookings", "/admin/bookings"],
   ["Reviews", "/admin/reviews"],
   ["Delivery", "/admin/settings"],
