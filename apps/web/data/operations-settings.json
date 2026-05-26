@@ -1,6 +1,15 @@
 {
-  "pickupEnabled": true,
-  "deliveryEnabled": true,
+  "pickupEnabled": false,
+  "deliveryEnabled": false,
+  "dineInEnabled": true,
+  "stripeEnabled": false,
+  "payInStoreEnabled": true,
+  "cashOnCollectionEnabled": false,
+  "cashOnDeliveryEnabled": false,
+  "enableOnlinePayments": false,
+  "enableDelivery": false,
+  "enableCollection": false,
+  "enableDineInQR": true,
   "deliveryRadiusMiles": 5,
   "deliveryFeePerMilePence": 0,
   "originPostcode": "SE1 5TY"

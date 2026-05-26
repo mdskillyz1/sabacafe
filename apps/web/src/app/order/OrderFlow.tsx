@@ -20,10 +20,10 @@ import {
 export function OrderFlow() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [fulfilmentType, setFulfilmentType] = useState<FulfilmentType>("PICKUP");
-  const [orderType, setOrderType] = useState<OrderType>("COLLECTION");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH_ON_COLLECTION");
+  const [orderType, setOrderType] = useState<OrderType>("DINE_IN");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("PAY_IN_STORE");
   const [tableNumber, setTableNumber] = useState("");
-  const [promoCode, setPromoCode] = useState("SABA10");
+  const [promoCode, setPromoCode] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -36,12 +36,12 @@ export function OrderFlow() {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [menuPublished, setMenuPublished] = useState(false);
   const [settings, setSettings] = useState<OperationsSettings>({
-    pickupEnabled: true,
-    deliveryEnabled: true,
+    pickupEnabled: false,
+    deliveryEnabled: false,
     dineInEnabled: true,
-    stripeEnabled: true,
+    stripeEnabled: false,
     payInStoreEnabled: true,
-    cashOnCollectionEnabled: true,
+    cashOnCollectionEnabled: false,
     cashOnDeliveryEnabled: false,
     deliveryRadiusMiles: 5,
     deliveryFeePerMilePence: 0,
@@ -50,6 +50,11 @@ export function OrderFlow() {
     prepTimeMinutes: 15
   });
   const [deliveryQuote, setDeliveryQuote] = useState<{ allowed: boolean; deliveryFeePence?: number; distanceMiles?: number; reason?: string } | null>(null);
+  const dineInOnlyMode =
+    settings.dineInEnabled !== false &&
+    !settings.pickupEnabled &&
+    !settings.deliveryEnabled &&
+    settings.stripeEnabled === false;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -73,7 +78,12 @@ export function OrderFlow() {
       .then((response) => response.json())
       .then((data) => {
         setSettings(data);
-        if (type !== "dine-in" && !data.pickupEnabled && data.deliveryEnabled) {
+        if (data.dineInEnabled !== false && !data.pickupEnabled && !data.deliveryEnabled) {
+          setOrderType("DINE_IN");
+          setFulfilmentType("PICKUP");
+          setPaymentMethod("PAY_IN_STORE");
+          setPromoCode("");
+        } else if (type !== "dine-in" && !data.pickupEnabled && data.deliveryEnabled) {
           setOrderType("DELIVERY");
           setFulfilmentType("DELIVERY");
           setPaymentMethod("STRIPE_ONLINE");
@@ -82,7 +92,7 @@ export function OrderFlow() {
   }, []);
 
   useEffect(() => {
-    if (fulfilmentType !== "DELIVERY" || !validatePostcode(postcode)) {
+    if (orderType !== "DELIVERY" || fulfilmentType !== "DELIVERY" || !validatePostcode(postcode)) {
       setDeliveryQuote(null);
       return;
     }
@@ -138,18 +148,21 @@ export function OrderFlow() {
 
   async function submitOrder() {
     setError("");
+    const activeOrderType: OrderType = dineInOnlyMode ? "DINE_IN" : orderType;
+    const activeFulfilmentType: FulfilmentType = activeOrderType === "DELIVERY" ? "DELIVERY" : "PICKUP";
+    const activePaymentMethod: PaymentMethod = dineInOnlyMode ? "PAY_IN_STORE" : paymentMethod;
     if (!cart.length) return setError("Add at least one dish to continue.");
-    if (orderType === "DINE_IN" && settings.dineInEnabled === false) return setError("Dine-in QR ordering is currently switched off.");
-    if (orderType === "COLLECTION" && !settings.pickupEnabled) return setError("Collection is currently switched off.");
-    if (orderType === "DELIVERY" && !settings.deliveryEnabled) return setError("Delivery is currently switched off.");
-    if (orderType !== "DINE_IN" && !totals.minimumMet) return setError(`Minimum order is ${money(settings.minimumOrderPence ?? 1200)} before discounts.`);
+    if (activeOrderType === "DINE_IN" && settings.dineInEnabled === false) return setError("Dine-in QR ordering is currently switched off.");
+    if (activeOrderType === "COLLECTION" && !settings.pickupEnabled) return setError("Collection is currently switched off.");
+    if (activeOrderType === "DELIVERY" && !settings.deliveryEnabled) return setError("Delivery is currently switched off.");
+    if (activeOrderType !== "DINE_IN" && !totals.minimumMet) return setError(`Minimum order is ${money(settings.minimumOrderPence ?? 1200)} before discounts.`);
     if (!customerName) return setError("Please add your name.");
-    if (orderType !== "DINE_IN" && !phone) return setError("Please add your phone number.");
-    if (orderType === "DINE_IN" && !tableNumber.trim()) return setError("Please confirm your table number.");
-    if (orderType === "DELIVERY" && (!addressLine1 || !validatePostcode(postcode))) {
+    if (activeOrderType !== "DINE_IN" && !phone) return setError("Please add your phone number.");
+    if (activeOrderType === "DINE_IN" && !tableNumber.trim()) return setError("Please confirm your table number.");
+    if (activeOrderType === "DELIVERY" && (!addressLine1 || !validatePostcode(postcode))) {
       return setError("Enter a valid delivery address and postcode.");
     }
-    if (orderType === "DELIVERY" && (!deliveryQuote || !deliveryQuote.allowed)) {
+    if (activeOrderType === "DELIVERY" && (!deliveryQuote || !deliveryQuote.allowed)) {
       return setError(deliveryQuote?.reason ?? "Please enter a delivery postcode inside our delivery radius.");
     }
     setLoading(true);
@@ -160,15 +173,15 @@ export function OrderFlow() {
         customerName,
         email,
         phone,
-        fulfilmentType,
-        orderType,
-        paymentMethod,
+        fulfilmentType: activeFulfilmentType,
+        orderType: activeOrderType,
+        paymentMethod: activePaymentMethod,
         tableNumber,
         addressLine1,
         postcode,
         deliveryNotes,
         scheduledFor,
-        promoCode,
+        promoCode: activeOrderType === "DINE_IN" ? "" : promoCode,
         items: cart
       })
     });
@@ -177,9 +190,9 @@ export function OrderFlow() {
       setLoading(false);
       return setError(order.error ?? "Order could not be created.");
     }
-    if (paymentMethod !== "STRIPE_ONLINE") {
+    if (activePaymentMethod !== "STRIPE_ONLINE") {
       setLoading(false);
-      window.location.href = `/order-confirmation?order=${order.id}&payment=${paymentMethod.toLowerCase()}`;
+      window.location.href = `/order-confirmation?order=${order.id}&payment=${activePaymentMethod.toLowerCase()}`;
       return;
     }
     const checkoutResponse = await fetch("/api/checkout", {
@@ -218,10 +231,10 @@ export function OrderFlow() {
     <main className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_390px] lg:px-8">
       <section>
         <div className="rounded-lg bg-date p-6 text-cream">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-saffron">Online ordering</p>
-          <h1 className="mt-2 font-display text-4xl font-semibold">Menu → cart → dine-in, collection, or delivery → payment → confirmation.</h1>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-saffron">Soft launch table ordering</p>
+          <h1 className="mt-2 font-display text-4xl font-semibold">Order from your table, then pay at the counter.</h1>
           <p className="mt-3 text-cream/75">
-            Order from {businessInfo.formattedAddress}. Stripe-ready checkout, live admin status updates, persistent accounts ready, and reorder/favourites hooks in place.
+            Scan the QR code, add your food, send the order to the kitchen, and a staff member will prepare it shortly.
           </p>
         </div>
         {!menuPublished || !items.length ? (
@@ -258,36 +271,51 @@ export function OrderFlow() {
           <h2 className="font-display text-3xl font-semibold text-date">Your order</h2>
           <ShoppingBag className="text-clay" />
         </div>
-        <div className="mt-5 grid gap-2 sm:grid-cols-3">
-          <button
-            type="button"
-            onClick={() => selectOrderType("DINE_IN")}
-            disabled={settings.dineInEnabled === false}
-            className={`focus-ring rounded-md border px-3 py-3 text-sm font-semibold ${orderType === "DINE_IN" ? "border-date bg-date text-cream" : "border-date/15"}`}
-          >
-            <QrCode className="mx-auto mb-1" size={18} /> Dine-in
-          </button>
-          <button
-            type="button"
-            onClick={() => selectOrderType("COLLECTION")}
-            disabled={!settings.pickupEnabled}
-            className={`focus-ring rounded-md border px-3 py-3 text-sm font-semibold ${orderType === "COLLECTION" ? "border-date bg-date text-cream" : "border-date/15"}`}
-          >
-            <Store className="mx-auto mb-1" size={18} /> Collection
-          </button>
-          <button
-            type="button"
-            onClick={() => selectOrderType("DELIVERY")}
-            disabled={!settings.deliveryEnabled}
-            className={`focus-ring rounded-md border px-3 py-3 text-sm font-semibold ${orderType === "DELIVERY" ? "border-date bg-date text-cream" : "border-date/15"}`}
-          >
-            <Bike className="mx-auto mb-1" size={18} /> Delivery
-          </button>
-        </div>
-        <p className="mt-3 rounded-md bg-cream p-3 text-xs leading-5 text-date/65">
-          Delivery is available within {settings.deliveryRadiusMiles} miles of {businessInfo.formattedAddress}.
-          {settings.deliveryFeePerMilePence > 0 ? ` Fee: ${money(settings.deliveryFeePerMilePence)} per mile.` : " Delivery fee is set by staff."}
-        </p>
+        {dineInOnlyMode ? (
+          <div className="mt-5 rounded-lg border border-mint/20 bg-mint/10 p-4 text-sm leading-6 text-date">
+            <div className="flex items-center gap-2 font-semibold text-mint">
+              <QrCode size={18} /> Dine-in QR ordering only
+            </div>
+            <p className="mt-2 text-date/70">Please confirm your table number, send your order, then pay at the counter.</p>
+          </div>
+        ) : (
+          <>
+            <div className="mt-5 grid gap-2 sm:grid-cols-3">
+              <button
+                type="button"
+                onClick={() => selectOrderType("DINE_IN")}
+                disabled={settings.dineInEnabled === false}
+                className={`focus-ring rounded-md border px-3 py-3 text-sm font-semibold ${orderType === "DINE_IN" ? "border-date bg-date text-cream" : "border-date/15"}`}
+              >
+                <QrCode className="mx-auto mb-1" size={18} /> Dine-in
+              </button>
+              {settings.pickupEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => selectOrderType("COLLECTION")}
+                  className={`focus-ring rounded-md border px-3 py-3 text-sm font-semibold ${orderType === "COLLECTION" ? "border-date bg-date text-cream" : "border-date/15"}`}
+                >
+                  <Store className="mx-auto mb-1" size={18} /> Collection
+                </button>
+              ) : null}
+              {settings.deliveryEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => selectOrderType("DELIVERY")}
+                  className={`focus-ring rounded-md border px-3 py-3 text-sm font-semibold ${orderType === "DELIVERY" ? "border-date bg-date text-cream" : "border-date/15"}`}
+                >
+                  <Bike className="mx-auto mb-1" size={18} /> Delivery
+                </button>
+              ) : null}
+            </div>
+            {settings.deliveryEnabled ? (
+              <p className="mt-3 rounded-md bg-cream p-3 text-xs leading-5 text-date/65">
+                Delivery is available within {settings.deliveryRadiusMiles} miles of {businessInfo.formattedAddress}.
+                {settings.deliveryFeePerMilePence > 0 ? ` Fee: ${money(settings.deliveryFeePerMilePence)} per mile.` : " Delivery fee is set by staff."}
+              </p>
+            ) : null}
+          </>
+        )}
 
         <div className="mt-5 space-y-3">
           {cart.length ? (
@@ -319,13 +347,13 @@ export function OrderFlow() {
               </div>
             ))
           ) : (
-            <p className="rounded-md bg-cream p-4 text-sm text-date/65">Add a dish to start. Favourites and reorder buttons connect to customer accounts.</p>
+            <p className="rounded-md bg-cream p-4 text-sm text-date/65">Add dishes to send your table order to the kitchen.</p>
           )}
         </div>
 
         <div className="mt-5 grid gap-3">
           <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Name" value={customerName} onChange={(event) => setCustomerName(event.target.value)} />
-          <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Email (optional)" value={email} onChange={(event) => setEmail(event.target.value)} />
+          {!dineInOnlyMode ? <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Email (optional)" value={email} onChange={(event) => setEmail(event.target.value)} /> : null}
           <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder={orderType === "DINE_IN" ? "Phone (optional)" : "Phone"} value={phone} onChange={(event) => setPhone(event.target.value)} />
           {orderType === "DINE_IN" ? (
             <label className="text-sm font-semibold text-date/70">
@@ -352,21 +380,25 @@ export function OrderFlow() {
             <input className="focus-ring mt-1 w-full rounded-md border border-date/15 px-4 py-3 font-normal" type="datetime-local" value={scheduledFor} onChange={(event) => setScheduledFor(event.target.value)} />
           </label> : null}
           {orderType !== "DINE_IN" ? <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Promo code" value={promoCode} onChange={(event) => setPromoCode(event.target.value)} /> : null}
-          <label className="text-sm font-semibold text-date/70">
-            Payment method
-            <select className="focus-ring mt-1 w-full rounded-md border border-date/15 px-4 py-3 font-normal" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}>
-              {settings.stripeEnabled !== false ? <option value="STRIPE_ONLINE">Pay online by card</option> : null}
-              {orderType === "DINE_IN" && settings.payInStoreEnabled !== false ? <option value="PAY_IN_STORE">Pay in store</option> : null}
-              {orderType === "COLLECTION" && settings.cashOnCollectionEnabled !== false ? <option value="CASH_ON_COLLECTION">Cash / pay on collection</option> : null}
-              {orderType === "DELIVERY" && settings.cashOnDeliveryEnabled ? <option value="CASH_ON_DELIVERY">Cash on delivery</option> : null}
-            </select>
-          </label>
+          {dineInOnlyMode ? (
+            <p className="rounded-md bg-saffron/15 p-3 text-sm font-semibold text-date">Payment: please pay at the counter after ordering.</p>
+          ) : (
+            <label className="text-sm font-semibold text-date/70">
+              Payment method
+              <select className="focus-ring mt-1 w-full rounded-md border border-date/15 px-4 py-3 font-normal" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}>
+                {settings.stripeEnabled !== false ? <option value="STRIPE_ONLINE">Pay online by card</option> : null}
+                {orderType === "DINE_IN" && settings.payInStoreEnabled !== false ? <option value="PAY_IN_STORE">Pay in store</option> : null}
+                {orderType === "COLLECTION" && settings.cashOnCollectionEnabled !== false ? <option value="CASH_ON_COLLECTION">Cash / pay on collection</option> : null}
+                {orderType === "DELIVERY" && settings.cashOnDeliveryEnabled ? <option value="CASH_ON_DELIVERY">Cash on delivery</option> : null}
+              </select>
+            </label>
+          )}
         </div>
 
         <div className="mt-5 space-y-2 border-t border-date/10 pt-5 text-sm">
           <div className="flex justify-between"><span>Subtotal</span><span>{money(totals.subtotalPence)}</span></div>
-          <div className="flex justify-between"><span>Discount</span><span>-{money(totals.discountPence)}</span></div>
-          <div className="flex justify-between"><span>Delivery</span><span>{money(totals.deliveryFeePence)}</span></div>
+          {totals.discountPence ? <div className="flex justify-between"><span>Discount</span><span>-{money(totals.discountPence)}</span></div> : null}
+          {totals.deliveryFeePence ? <div className="flex justify-between"><span>Delivery</span><span>{money(totals.deliveryFeePence)}</span></div> : null}
           <div className="flex justify-between"><span>VAT included</span><span>{money(totals.vatPence)}</span></div>
           <div className="flex justify-between text-lg font-semibold text-date"><span>Total</span><span>{money(totals.totalPence)}</span></div>
         </div>
@@ -377,11 +409,12 @@ export function OrderFlow() {
           disabled={loading}
           className="focus-ring mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-mint px-5 py-4 font-semibold text-white disabled:opacity-60"
         >
-          <CreditCard size={18} /> {loading ? "Sending order..." : paymentMethod === "STRIPE_ONLINE" ? "Pay securely" : "Send order"}
+          {paymentMethod === "STRIPE_ONLINE" && !dineInOnlyMode ? <CreditCard size={18} /> : <QrCode size={18} />}
+          {loading ? "Sending order..." : paymentMethod === "STRIPE_ONLINE" && !dineInOnlyMode ? "Pay securely" : "Send table order"}
         </button>
-        <button type="button" className="focus-ring mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-date/15 px-5 py-3 font-semibold text-date">
+        {!dineInOnlyMode ? <button type="button" className="focus-ring mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-date/15 px-5 py-3 font-semibold text-date">
           <Heart size={17} /> Save as favourite
-        </button>
+        </button> : null}
       </aside>
     </main>
   );

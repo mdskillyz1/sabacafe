@@ -1,7 +1,7 @@
 export type FulfilmentType = "PICKUP" | "DELIVERY";
 export type OrderType = "DINE_IN" | "COLLECTION" | "DELIVERY";
 export type PaymentMethod = "STRIPE_ONLINE" | "PAY_IN_STORE" | "CASH_ON_COLLECTION" | "CASH_ON_DELIVERY";
-export type PaymentStatus = "PENDING" | "REQUIRES_ACTION" | "PAID" | "FAILED" | "REFUNDED" | "PAY_IN_STORE";
+export type PaymentStatus = "PENDING" | "PENDING_PAYMENT" | "REQUIRES_ACTION" | "PAID" | "FAILED" | "REFUNDED" | "PAY_IN_STORE";
 export type OrderStatus =
   | "RECEIVED"
   | "ACCEPTED"
@@ -91,6 +91,10 @@ export type OperationsSettings = {
   payInStoreEnabled?: boolean;
   cashOnCollectionEnabled?: boolean;
   cashOnDeliveryEnabled?: boolean;
+  enableOnlinePayments?: boolean;
+  enableDelivery?: boolean;
+  enableCollection?: boolean;
+  enableDineInQR?: boolean;
   deliveryRadiusMiles: number;
   deliveryFeePerMilePence: number;
   originPostcode: string;

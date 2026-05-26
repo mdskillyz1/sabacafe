@@ -11,13 +11,17 @@ const candidateSettingsPaths = [
 ];
 
 export const defaultOperationsSettings = (): OperationsSettings => ({
-  pickupEnabled: true,
-  deliveryEnabled: true,
+  pickupEnabled: false,
+  deliveryEnabled: false,
   dineInEnabled: true,
-  stripeEnabled: true,
+  stripeEnabled: false,
   payInStoreEnabled: true,
-  cashOnCollectionEnabled: true,
+  cashOnCollectionEnabled: false,
   cashOnDeliveryEnabled: false,
+  enableOnlinePayments: false,
+  enableDelivery: false,
+  enableCollection: false,
+  enableDineInQR: true,
   deliveryRadiusMiles: 5,
   deliveryFeePerMilePence: 0,
   originPostcode: businessInfo.deliveryOriginPostcode,
@@ -56,6 +60,10 @@ export async function readOperationsSettings(): Promise<OperationsSettings> {
     return {
       ...defaultOperationsSettings(),
       ...parsed,
+      pickupEnabled: Boolean(parsed.enableCollection ?? parsed.pickupEnabled ?? false),
+      deliveryEnabled: Boolean(parsed.enableDelivery ?? parsed.deliveryEnabled ?? false),
+      dineInEnabled: (parsed.enableDineInQR ?? parsed.dineInEnabled) !== false,
+      stripeEnabled: Boolean(parsed.enableOnlinePayments ?? parsed.stripeEnabled ?? false),
       deliveryRadiusMiles: Number(parsed.deliveryRadiusMiles ?? 5),
       deliveryFeePerMilePence: Number(parsed.deliveryFeePerMilePence ?? 0),
       minimumOrderPence: Number(parsed.minimumOrderPence ?? 1200),
@@ -81,6 +89,10 @@ export async function writeOperationsSettings(input: OperationsSettings) {
     minimumOrderPence: Math.max(0, Math.round(Number(input.minimumOrderPence) || 1200)),
     prepTimeMinutes: Math.max(0, Math.round(Number(input.prepTimeMinutes) || 15))
   };
+  settings.enableOnlinePayments = settings.stripeEnabled;
+  settings.enableDelivery = settings.deliveryEnabled;
+  settings.enableCollection = settings.pickupEnabled;
+  settings.enableDineInQR = settings.dineInEnabled;
   const settingsPath = await writableSettingsPath();
   await fs.mkdir(path.dirname(settingsPath), { recursive: true });
   await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));

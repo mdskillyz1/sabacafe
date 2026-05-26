@@ -10,7 +10,7 @@ export default function KitchenPage() {
       breadcrumbs={[{ label: "Kitchen" }]}
       backLabel="Back to overview"
     >
-      <OrdersAdmin />
+      <OrdersAdmin initialOrderType="DINE_IN" kitchenMode />
     </AdminPageShell>
   );
 }

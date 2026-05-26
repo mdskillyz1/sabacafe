@@ -3,7 +3,7 @@ import { adminSessionFromRequest } from "@/lib/adminSession";
 import { updateOrderPaymentStatus } from "@/lib/orderStore";
 import type { PaymentStatus } from "@saba/shared";
 
-const statuses: PaymentStatus[] = ["PENDING", "REQUIRES_ACTION", "PAID", "FAILED", "REFUNDED", "PAY_IN_STORE"];
+const statuses: PaymentStatus[] = ["PENDING", "PENDING_PAYMENT", "REQUIRES_ACTION", "PAID", "FAILED", "REFUNDED", "PAY_IN_STORE"];
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = adminSessionFromRequest(request);

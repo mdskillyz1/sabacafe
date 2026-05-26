@@ -33,6 +33,7 @@ enum OrderStatus {
 
 enum PaymentStatus {
   PENDING
+  PENDING_PAYMENT
   REQUIRES_ACTION
   PAID
   FAILED

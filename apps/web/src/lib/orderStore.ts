@@ -84,7 +84,7 @@ export async function ensureOrderSchema() {
         CREATE TYPE "OrderStatus" AS ENUM ('RECEIVED', 'ACCEPTED', 'PREPARING', 'READY', 'READY_FOR_PICKUP', 'SERVED', 'OUT_FOR_DELIVERY', 'COMPLETED', 'CANCELLED');
       END IF;
       IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'PaymentStatus') THEN
-        CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'REQUIRES_ACTION', 'PAID', 'FAILED', 'REFUNDED', 'PAY_IN_STORE');
+        CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'PENDING_PAYMENT', 'REQUIRES_ACTION', 'PAID', 'FAILED', 'REFUNDED', 'PAY_IN_STORE');
       END IF;
       IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'OrderType') THEN
         CREATE TYPE "OrderType" AS ENUM ('DINE_IN', 'COLLECTION', 'DELIVERY');
@@ -98,6 +98,7 @@ export async function ensureOrderSchema() {
   for (const value of ["ACCEPTED", "READY", "SERVED"]) {
     await addEnumValue("OrderStatus", value);
   }
+  await addEnumValue("PaymentStatus", "PENDING_PAYMENT");
   await addEnumValue("PaymentStatus", "PAY_IN_STORE");
   for (const value of ["DINE_IN", "COLLECTION", "DELIVERY"]) {
     await addEnumValue("OrderType", value);
@@ -325,7 +326,7 @@ export async function createOrder(input: CheckoutInput) {
   const number = orderNumber();
   const track = trackingCode();
   const now = new Date();
-  const paymentStatus: PaymentStatus = paymentMethod === "PAY_IN_STORE" ? "PAY_IN_STORE" : "PENDING";
+  const paymentStatus: PaymentStatus = paymentMethod === "PAY_IN_STORE" ? "PENDING_PAYMENT" : "PENDING";
   const deliveryAddress =
     orderType === "DELIVERY"
       ? {
