@@ -46,6 +46,7 @@ export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: {
   const [newOrderCount, setNewOrderCount] = useState(0);
   const [latestNewOrder, setLatestNewOrder] = useState<Order | null>(null);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [exitingOrderIds, setExitingOrderIds] = useState<Set<string>>(new Set());
   const statuses = kitchenMode ? dineInStatuses : allStatuses;
 
   async function load() {
@@ -76,6 +77,19 @@ export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status })
     });
+    if (kitchenMode && ["COMPLETED", "CANCELLED"].includes(status)) {
+      setExitingOrderIds((current) => new Set(current).add(id));
+      window.setTimeout(async () => {
+        await load();
+        setExitingOrderIds((current) => {
+          const next = new Set(current);
+          next.delete(id);
+          return next;
+        });
+        setUpdatingOrderId(null);
+      }, 420);
+      return;
+    }
     await load();
     window.setTimeout(() => setUpdatingOrderId(null), 250);
   }
@@ -149,18 +163,18 @@ export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: {
             <span className="rounded-full bg-date px-4 py-2 text-sm font-semibold text-cream">Dine-in kitchen view</span>
           ) : (
             orderFilters.map((filter) => (
-              <button key={filter} onClick={() => setOrderType(filter)} className={`rounded-full px-4 py-2 text-sm font-semibold ${orderType === filter ? "bg-date text-cream" : "bg-cream text-date"}`}>
+              <button key={filter} onClick={() => setOrderType(filter)} className={`saba-status-button rounded-full px-4 py-2 text-sm font-semibold transition hover:scale-[1.03] active:scale-[0.98] ${orderType === filter ? "bg-date text-cream" : "bg-cream text-date"}`}>
                 {filter === "ALL" ? "All orders" : filter.replace("_", "-")}
               </button>
             ))
           )}
           {!kitchenMode ? paymentFilters.map((filter) => (
-            <button key={filter} onClick={() => setPaymentStatus(filter)} className={`rounded-full px-4 py-2 text-sm font-semibold ${paymentStatus === filter ? "bg-mint text-white" : "bg-cream text-date"}`}>
+            <button key={filter} onClick={() => setPaymentStatus(filter)} className={`saba-status-button rounded-full px-4 py-2 text-sm font-semibold transition hover:scale-[1.03] active:scale-[0.98] ${paymentStatus === filter ? "bg-mint text-white" : "bg-cream text-date"}`}>
               {filter === "PENDING_PAYMENT" ? "Pending counter payment" : filter}
             </button>
           )) : null}
           {!kitchenMode ? statusFilters.map((filter) => (
-            <button key={filter} onClick={() => setStatusFilter(filter)} className={`rounded-full px-4 py-2 text-sm font-semibold ${statusFilter === filter ? "bg-saffron text-date" : "bg-cream text-date"}`}>
+            <button key={filter} onClick={() => setStatusFilter(filter)} className={`saba-status-button rounded-full px-4 py-2 text-sm font-semibold transition hover:scale-[1.03] active:scale-[0.98] ${statusFilter === filter ? "bg-saffron text-date" : "bg-cream text-date"}`}>
               {filter === "ALL" ? "All statuses" : filter.replaceAll("_", " ")}
             </button>
           )) : null}
@@ -179,8 +193,14 @@ export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: {
             const action = nextKitchenAction(currentStatus);
             const ActionIcon = action?.icon ?? Clock;
             const isUpdating = updatingOrderId === order.id;
+            const isExiting = exitingOrderIds.has(order.id);
             return (
-              <div key={order.id} className={`grid gap-4 border-t border-date/10 px-5 py-4 transition md:grid-cols-[1fr_170px_120px_220px] md:items-center ${kitchenMode ? "bg-saffron/10" : ""} ${isUpdating ? "animate-pulse ring-2 ring-mint/30" : ""}`}>
+              <div
+                key={order.id}
+                className={`saba-order-enter grid gap-4 border-t border-date/10 px-5 py-4 transition duration-300 md:grid-cols-[1fr_170px_120px_220px] md:items-center ${
+                  kitchenMode ? "bg-saffron/10" : ""
+                } ${isUpdating ? "saba-order-handling ring-2 ring-mint/30" : ""} ${isExiting ? "saba-order-exit" : ""}`}
+              >
                 <div>
                   <p className="flex flex-wrap items-center gap-2 font-semibold text-date">
                     <span>{order.orderNumber}</span>
@@ -224,13 +244,13 @@ export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: {
                         type="button"
                         disabled={isUpdating}
                         onClick={() => updateStatus(order.id, action.next)}
-                        className={`focus-ring flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold transition hover:scale-[1.02] disabled:opacity-70 ${action.tone}`}
+                        className={`saba-status-button focus-ring flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold transition hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 ${action.tone}`}
                       >
                         <ActionIcon size={17} className={isUpdating ? "animate-spin" : ""} />
                         {isUpdating ? "Handling..." : action.label}
                       </button>
                     ) : null}
-                    <button type="button" onClick={() => updateStatus(order.id, "CANCELLED")} className="focus-ring w-full rounded-full border border-date/15 px-4 py-2 text-sm font-semibold text-date">
+                    <button type="button" onClick={() => updateStatus(order.id, "CANCELLED")} className="saba-status-button focus-ring w-full rounded-full border border-date/15 px-4 py-2 text-sm font-semibold text-date transition active:scale-[0.98]">
                       Cancel
                     </button>
                   </div>
