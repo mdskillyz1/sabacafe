@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, CheckCircle2, ChefHat, Clock, Flame, X } from "lucide-react";
+import { Banknote, Bell, CheckCircle2, ChefHat, Clock, CreditCard, Flame, ReceiptText, X } from "lucide-react";
 import { money } from "@saba/shared";
 
 type Order = {
@@ -47,6 +47,25 @@ const statusLabels: Record<string, string> = {
   COMPLETED: "Completed",
   CANCELLED: "Cancelled"
 };
+
+function humanLabel(value: string) {
+  return value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function paymentTone(status: string) {
+  if (status === "PAID") return "border-mint/25 bg-mint/10 text-mint";
+  if (status === "PENDING_PAYMENT" || status === "PAY_IN_STORE" || status === "PENDING") return "border-saffron/35 bg-saffron/15 text-clay";
+  if (status === "FAILED" || status === "REFUNDED") return "border-red-200 bg-red-50 text-red-700";
+  return "border-date/10 bg-cream text-date";
+}
+
+function statusTone(status: string) {
+  if (status === "COMPLETED" || status === "SERVED") return "border-mint/25 bg-mint/10 text-mint";
+  if (status === "READY") return "border-saffron/35 bg-saffron/15 text-clay";
+  if (status === "PREPARING") return "border-date/15 bg-date text-cream";
+  if (status === "CANCELLED") return "border-red-200 bg-red-50 text-red-700";
+  return "border-date/10 bg-cream text-date";
+}
 
 function nextKitchenAction(status: string) {
   if (status === "RECEIVED") return { next: "PREPARING", label: "Start preparing", icon: Flame, tone: "bg-date text-cream" };
@@ -101,6 +120,7 @@ export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: {
   const [newOrderCount, setNewOrderCount] = useState(0);
   const [latestNewOrder, setLatestNewOrder] = useState<Order | null>(null);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [updatingPaymentOrderId, setUpdatingPaymentOrderId] = useState<string | null>(null);
   const [exitingOrderIds, setExitingOrderIds] = useState<Set<string>>(new Set());
   const statuses = kitchenMode ? dineInStatuses : allStatuses;
   const liveOrders = orders.filter((order) => !["COMPLETED", "CANCELLED"].includes(order.status ?? order.orderStatus)).length;
@@ -158,12 +178,14 @@ export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: {
   }
 
   async function updatePaymentStatus(id: string, paymentStatus: string) {
+    setUpdatingPaymentOrderId(id);
     await fetch(`/api/admin/orders/${id}/payment-status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ paymentStatus })
     });
     await load();
+    window.setTimeout(() => setUpdatingPaymentOrderId(null), 250);
   }
 
   useEffect(() => {
@@ -260,7 +282,7 @@ export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: {
         </div>
       </div>
       <div className="overflow-hidden rounded-lg border border-date/10 bg-white shadow-sm">
-        <div className="grid bg-cream px-5 py-3 text-sm font-semibold text-date md:grid-cols-[1fr_170px_120px_220px]">
+        <div className="hidden bg-cream px-5 py-3 text-sm font-semibold text-date lg:grid lg:grid-cols-[minmax(0,1fr)_230px_140px_260px]">
           <span>Order</span>
           <span>Payment</span>
           <span>Total</span>
@@ -272,11 +294,14 @@ export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: {
             const action = nextKitchenAction(currentStatus);
             const ActionIcon = action?.icon ?? Clock;
             const isUpdating = updatingOrderId === order.id;
+            const isPaymentUpdating = updatingPaymentOrderId === order.id;
             const isExiting = exitingOrderIds.has(order.id);
+            const paymentIsPaid = order.paymentStatus === "PAID";
+            const regularStatusActions = ["RECEIVED", "PREPARING", "READY", "SERVED", "COMPLETED"];
             return (
               <div
                 key={order.id}
-                className={`saba-order-enter grid gap-4 border-t border-date/10 px-5 py-4 transition duration-300 md:grid-cols-[1fr_170px_120px_220px] md:items-center ${
+                className={`saba-order-enter grid gap-4 border-t border-date/10 px-5 py-4 transition duration-300 lg:grid-cols-[minmax(0,1fr)_230px_140px_260px] lg:items-start ${
                   kitchenMode ? "bg-saffron/10" : ""
                 } ${isUpdating ? "saba-order-handling ring-2 ring-mint/30" : ""} ${isExiting ? "saba-order-exit" : ""}`}
               >
@@ -303,18 +328,48 @@ export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: {
                   </div>
                   <p className="mt-2 text-xs text-date/45">Tracking {order.trackingCode}</p>
                 </div>
-                <div>
-                  <span className="text-sm font-semibold text-mint">{order.paymentStatus === "PENDING_PAYMENT" ? "Pending counter payment" : order.paymentStatus}</span>
-                  <p className="text-xs text-date/55">{order.paymentMethod.replaceAll("_", " ")}</p>
+                <div className={`rounded-xl border p-3 shadow-sm transition ${paymentTone(order.paymentStatus)} ${isPaymentUpdating ? "saba-order-handling ring-2 ring-mint/20" : ""}`}>
+                  <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em]">
+                    {paymentIsPaid ? <CreditCard size={14} /> : <Banknote size={14} />}
+                    Payment
+                  </p>
+                  <p className="mt-2 text-sm font-bold">{order.paymentStatus === "PENDING_PAYMENT" ? "Pending counter payment" : humanLabel(order.paymentStatus)}</p>
+                  <p className="mt-1 text-xs opacity-75">{humanLabel(order.paymentMethod)}</p>
                   {!kitchenMode ? (
-                    <select className="focus-ring mt-2 w-full rounded-md border border-date/15 px-2 py-1 text-xs" value={order.paymentStatus} onChange={(event) => updatePaymentStatus(order.id, event.target.value)}>
-                      {paymentFilters.filter((status) => status !== "ALL").map((status) => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {!paymentIsPaid ? (
+                        <button
+                          type="button"
+                          disabled={isPaymentUpdating}
+                          onClick={() => updatePaymentStatus(order.id, "PAID")}
+                          className="saba-status-button focus-ring rounded-full bg-mint px-3 py-2 text-xs font-semibold text-white transition hover:scale-[1.03] active:scale-[0.98] disabled:opacity-70"
+                        >
+                          {isPaymentUpdating ? "Updating..." : "Mark paid"}
+                        </button>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-3 py-2 text-xs font-semibold">
+                          <CheckCircle2 size={13} /> Paid
+                        </span>
+                      )}
+                      {paymentIsPaid ? (
+                        <button
+                          type="button"
+                          disabled={isPaymentUpdating}
+                          onClick={() => updatePaymentStatus(order.id, "PENDING_PAYMENT")}
+                          className="saba-status-button focus-ring rounded-full border border-date/15 bg-white/70 px-3 py-2 text-xs font-semibold text-date transition hover:scale-[1.03] active:scale-[0.98] disabled:opacity-70"
+                        >
+                          Reopen payment
+                        </button>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
-                <span className="font-semibold text-date">{money(order.totalPence ?? order.totals.totalPence)}</span>
+                <div className="rounded-xl border border-date/10 bg-cream/70 p-3">
+                  <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-date/45">
+                    <ReceiptText size={14} /> Total
+                  </p>
+                  <p className="mt-2 font-display text-2xl font-semibold text-date">{money(order.totalPence ?? order.totals.totalPence)}</p>
+                </div>
                 {kitchenMode ? (
                   <div className="space-y-2">
                     <span className="block rounded-full bg-cream px-3 py-2 text-center text-xs font-semibold text-date">{currentStatus.replaceAll("_", " ")}</span>
@@ -334,11 +389,35 @@ export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: {
                     </button>
                   </div>
                 ) : (
-                  <select className="focus-ring rounded-md border border-date/15 px-3 py-2" value={currentStatus} onChange={(event) => updateStatus(order.id, event.target.value)}>
-                    {statuses.map((status) => (
-                      <option key={status} value={status}>{status}</option>
-                    ))}
-                  </select>
+                  <div className={`rounded-xl border p-3 shadow-sm transition ${statusTone(currentStatus)} ${isUpdating ? "saba-order-handling ring-2 ring-mint/20" : ""}`}>
+                    <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em]">
+                      <Clock size={14} /> Status
+                    </p>
+                    <p className="mt-2 text-sm font-bold">{humanLabel(currentStatus)}</p>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      {regularStatusActions.map((status) => (
+                        <button
+                          key={status}
+                          type="button"
+                          disabled={isUpdating || currentStatus === status}
+                          onClick={() => updateStatus(order.id, status)}
+                          className={`saba-status-button focus-ring rounded-full px-3 py-2 text-xs font-semibold transition hover:scale-[1.03] active:scale-[0.98] disabled:cursor-default disabled:opacity-70 ${
+                            currentStatus === status ? "bg-date text-cream" : "bg-white/75 text-date"
+                          }`}
+                        >
+                          {isUpdating && currentStatus !== status ? "..." : statusLabels[status] ?? humanLabel(status)}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isUpdating || currentStatus === "CANCELLED"}
+                      onClick={() => updateStatus(order.id, "CANCELLED")}
+                      className="saba-status-button focus-ring mt-2 w-full rounded-full border border-red-200 bg-white/75 px-3 py-2 text-xs font-semibold text-red-700 transition hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
+                    >
+                      Cancel order
+                    </button>
+                  </div>
                 )}
               </div>
             );
