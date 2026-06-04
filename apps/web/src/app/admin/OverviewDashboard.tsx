@@ -32,6 +32,16 @@ const rangeOptions = [
 ];
 
 const kpiIcons = [PoundSterling, TrendingUp, CalendarDays, MousePointerClick, CreditCard, ShoppingBag, Clock, Users];
+const kpiLinks = [
+  "/admin/orders?paymentStatus=PAID",
+  "/admin/orders",
+  "/admin/bookings",
+  "/admin/website-settings",
+  "/admin/orders?paymentStatus=PAID",
+  "/admin/orders?status=RECEIVED",
+  "/admin/bookings",
+  "/admin/orders?status=COMPLETED"
+];
 const adminLinks = [
   ["Menu", "/admin/menu"],
   ["Orders", "/admin/orders"],
@@ -137,6 +147,7 @@ export function OverviewDashboard() {
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
   const query = useMemo(() => {
@@ -150,10 +161,12 @@ export function OverviewDashboard() {
 
   async function load() {
     setLoading(true);
+    setRefreshing(true);
     setError("");
     const response = await fetch(`/api/admin/analytics/overview?${query}`, { cache: "no-store" });
     const body = await response.json().catch(() => null);
     setLoading(false);
+    window.setTimeout(() => setRefreshing(false), 450);
     if (!response.ok || !body) {
       setError(body?.error ?? "Unable to load analytics.");
       return;
@@ -188,8 +201,8 @@ export function OverviewDashboard() {
             <p className="mt-3 max-w-3xl text-cream/70">Real orders, bookings, website events, and admin activity. No mock analytics are shown.</p>
           </div>
           <div className="flex gap-3">
-            <button onClick={load} className="focus-ring inline-flex items-center gap-2 rounded-full border border-cream/20 px-4 py-2 text-sm font-semibold text-cream">
-              <RefreshCw size={16} /> Refresh
+            <button onClick={load} disabled={refreshing} className="focus-ring inline-flex items-center gap-2 rounded-full border border-cream/20 px-4 py-2 text-sm font-semibold text-cream disabled:opacity-70">
+              <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} /> {refreshing ? "Refreshing..." : "Refresh"}
             </button>
             <AdminLogoutButton />
           </div>
@@ -233,7 +246,7 @@ export function OverviewDashboard() {
             {kpis.map(([label, value, comparison, tone], index) => {
               const Icon = kpiIcons[index] ?? Activity;
               return (
-                <div key={label} className="rounded-lg border border-date/10 bg-white p-5 shadow-sm">
+                <Link key={label} href={kpiLinks[index] ?? "/admin"} className="focus-ring group rounded-lg border border-date/10 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-mint/30 hover:shadow-soft">
                   <div className="flex items-start justify-between gap-3">
                     <span>
                       <p className="text-sm font-semibold text-date/55">{label}</p>
@@ -244,7 +257,8 @@ export function OverviewDashboard() {
                     </span>
                   </div>
                   <p className="mt-3 text-xs font-semibold text-date/50">{comparison}</p>
-                </div>
+                  <p className="mt-2 text-xs font-semibold text-mint opacity-0 transition group-hover:opacity-100">Open details</p>
+                </Link>
               );
             })}
           </section>
