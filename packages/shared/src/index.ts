@@ -258,8 +258,7 @@ export const businessInfo = {
   googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=Saba%20Cafe%20152%20Old%20Kent%20Rd%20London%20SE1%205TY",
   googleDirectionsUrl:
     "https://www.google.com/maps/dir/?api=1&destination=Saba%20Cafe%2C%20152%20Old%20Kent%20Rd%2C%20London%20SE1%205TY",
-  googleReviewUrl:
-    "https://www.google.com/search?client=safari&hs=IG8U&sca_esv=fec7a8aac00c39eb&rls=en&sxsrf=ANbL-n4ZpGeld9tw7fL0GwdAaHONdRoQhQ:1777487607874&si=AL3DRZEsmMGCryMMFSHJ3StBhOdZ2-6yYkXd_doETEE1OR-qOTzBUoRnorFKgt2f9oRkUHQ5zoBJlX7BUwByjwVTUBTNED7Tlx0H_z0b8rhzVLecMRTU5UUV5fq-K33VmgA8wJWikWnb&q=Saba+Cafe+Reviews&sa=X&ved=2ahUKEwi-l9ar2ZOUAxXtUEEAHf6bKtIQ0bkNegQIMRAF&biw=1440&bih=820&dpr=2#",
+  googleReviewUrl: "https://g.page/r/CaphpFnncQ9OEAE/review",
   mapsEmbedUrl:
     "https://www.google.com/maps?q=Saba%20Cafe%2C%20152%20Old%20Kent%20Rd%2C%20London%20SE1%205TY&output=embed",
   todayHoursLabel: "Open today until 10 pm"
