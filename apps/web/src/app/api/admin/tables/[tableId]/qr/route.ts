@@ -25,7 +25,7 @@ function qrSvg(url: string, label: string) {
       <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:Arial,sans-serif;font-size:22px;line-height:1.35;text-align:center;color:#422116;word-break:break-all;">${safeUrl}</div>
     </foreignObject>
     <text x="360" y="790" text-anchor="middle" font-size="30" font-family="Arial,sans-serif" fill="#117c68">Scan. Order. Relax.</text>
-    <text x="360" y="835" text-anchor="middle" font-size="22" font-family="Arial,sans-serif" fill="#856f64">Pay online or pay in store</text>
+    <text x="360" y="835" text-anchor="middle" font-size="22" font-family="Arial,sans-serif" fill="#856f64">Send your order, then pay at the counter</text>
   </svg>`;
 }
 

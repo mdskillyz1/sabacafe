@@ -23,6 +23,7 @@ export function OrderFlow() {
   const [orderType, setOrderType] = useState<OrderType>("DINE_IN");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("PAY_IN_STORE");
   const [tableNumber, setTableNumber] = useState("");
+  const [hasTableQrAccess, setHasTableQrAccess] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [email, setEmail] = useState("");
@@ -60,12 +61,14 @@ export function OrderFlow() {
     const params = new URLSearchParams(window.location.search);
     const type = params.get("type");
     const table = params.get("table");
+    const isDineInQrLink = (type === "dine-in" || type === "dine_in") && Boolean(table?.trim());
     if (type === "dine-in" || type === "dine_in") {
       setOrderType("DINE_IN");
       setFulfilmentType("PICKUP");
       setPaymentMethod("PAY_IN_STORE");
       setPromoCode("");
     }
+    setHasTableQrAccess(isDineInQrLink);
     if (table) setTableNumber(table);
 
     fetch("/api/menu", { cache: "no-store" })
@@ -153,6 +156,7 @@ export function OrderFlow() {
     const activePaymentMethod: PaymentMethod = dineInOnlyMode ? "PAY_IN_STORE" : paymentMethod;
     if (!cart.length) return setError("Add at least one dish to continue.");
     if (activeOrderType === "DINE_IN" && settings.dineInEnabled === false) return setError("Dine-in QR ordering is currently switched off.");
+    if (activeOrderType === "DINE_IN" && !hasTableQrAccess) return setError("Please scan the QR code on your table to send an order to the kitchen.");
     if (activeOrderType === "COLLECTION" && !settings.pickupEnabled) return setError("Collection is currently switched off.");
     if (activeOrderType === "DELIVERY" && !settings.deliveryEnabled) return setError("Delivery is currently switched off.");
     if (activeOrderType !== "DINE_IN" && !totals.minimumMet) return setError(`Minimum order is ${money(settings.minimumOrderPence ?? 1200)} before discounts.`);
@@ -281,11 +285,15 @@ export function OrderFlow() {
 
         <div className="p-5">
           {dineInOnlyMode ? (
-            <div className="rounded-lg border border-mint/20 bg-mint/10 p-4 text-sm leading-6 text-date">
-              <div className="flex items-center gap-2 font-semibold text-mint">
-                <QrCode size={18} /> Dine-in QR ordering only
+            <div className={`rounded-lg border p-4 text-sm leading-6 text-date ${hasTableQrAccess ? "border-mint/20 bg-mint/10" : "border-saffron/30 bg-saffron/15"}`}>
+              <div className={`flex items-center gap-2 font-semibold ${hasTableQrAccess ? "text-mint" : "text-clay"}`}>
+                <QrCode size={18} /> {hasTableQrAccess ? "Table QR connected" : "Menu browsing only"}
               </div>
-              <p className="mt-2 text-date/70">Send your order to the kitchen from the table, then pay at the counter.</p>
+              <p className="mt-2 text-date/70">
+                {hasTableQrAccess
+                  ? "Send your order to the kitchen from the table, then pay at the counter."
+                  : "You can view the menu here. To place an order, please scan the QR code on your table inside Saba Cafe."}
+              </p>
             </div>
           ) : (
             <>
@@ -377,7 +385,14 @@ export function OrderFlow() {
             {orderType === "DINE_IN" ? (
               <label className="text-sm font-semibold text-date/70">
                 Table number
-                <input className="focus-ring mt-1 w-full rounded-md border border-date/15 px-4 py-3 font-normal" placeholder="e.g. 12" value={tableNumber} onChange={(event) => setTableNumber(event.target.value)} />
+                <input
+                  className="focus-ring mt-1 w-full rounded-md border border-date/15 px-4 py-3 font-normal"
+                  placeholder="Scan table QR code"
+                  value={tableNumber}
+                  onChange={(event) => setTableNumber(event.target.value)}
+                  readOnly={!hasTableQrAccess}
+                />
+                {!hasTableQrAccess ? <span className="mt-2 block text-xs font-normal text-clay">Ordering unlocks from the table QR code only.</span> : null}
               </label>
             ) : null}
             {orderType === "DELIVERY" ? (
@@ -425,11 +440,17 @@ export function OrderFlow() {
           <button
             type="button"
             onClick={submitOrder}
-            disabled={loading}
+            disabled={loading || (dineInOnlyMode && !hasTableQrAccess)}
             className="focus-ring mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-mint px-5 py-4 font-semibold text-white disabled:opacity-60"
           >
             {paymentMethod === "STRIPE_ONLINE" && !dineInOnlyMode ? <CreditCard size={18} /> : <QrCode size={18} />}
-            {loading ? "Sending order..." : paymentMethod === "STRIPE_ONLINE" && !dineInOnlyMode ? "Pay securely" : "Send table order"}
+            {loading
+              ? "Sending order..."
+              : dineInOnlyMode && !hasTableQrAccess
+                ? "Scan table QR to order"
+                : paymentMethod === "STRIPE_ONLINE" && !dineInOnlyMode
+                  ? "Pay securely"
+                  : "Send table order"}
           </button>
         </div>
       </aside>

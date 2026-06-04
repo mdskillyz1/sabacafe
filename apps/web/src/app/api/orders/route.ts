@@ -3,7 +3,24 @@ import { createOrder, getOrders } from "@/lib/orderStore";
 import { quoteDelivery } from "@/lib/delivery";
 import { getPublishedMenu } from "@/lib/menuStore";
 import { readOperationsSettings } from "@/lib/operationsSettings";
+import { readBookingStore } from "@/lib/bookingStore";
 import { calculatePrice, validatePostcode, type CheckoutInput } from "@saba/shared";
+
+function normaliseTable(value?: string | null) {
+  return String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+async function isActiveTable(tableNumber?: string) {
+  const requested = normaliseTable(tableNumber);
+  if (!requested) return false;
+  const store = await readBookingStore();
+  return store.tables.some((table) => {
+    if (!table.active) return false;
+    const name = normaliseTable(table.name);
+    const shortName = name.replace(/^table\s+/, "");
+    return requested === name || requested === shortName;
+  });
+}
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -26,6 +43,9 @@ export async function POST(request: Request) {
   const settings = await readOperationsSettings();
   if (orderType === "DINE_IN" && settings.dineInEnabled === false) {
     return NextResponse.json({ error: "Dine-in QR ordering is currently switched off." }, { status: 400 });
+  }
+  if (orderType === "DINE_IN" && !(await isActiveTable(input.tableNumber))) {
+    return NextResponse.json({ error: "Please scan an active table QR code inside Saba Cafe before ordering." }, { status: 400 });
   }
   if (orderType === "COLLECTION" && !settings.pickupEnabled) {
     return NextResponse.json({ error: "Collection is currently switched off." }, { status: 400 });
