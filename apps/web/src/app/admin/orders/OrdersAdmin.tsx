@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Bell, X } from "lucide-react";
 import { money } from "@saba/shared";
 
 type Order = {
@@ -31,6 +32,9 @@ export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: {
   const [orders, setOrders] = useState<Order[]>([]);
   const [orderType, setOrderType] = useState(initialOrderType);
   const [paymentStatus, setPaymentStatus] = useState("ALL");
+  const [knownOrderIds, setKnownOrderIds] = useState<Set<string> | null>(null);
+  const [newOrderCount, setNewOrderCount] = useState(0);
+  const [latestNewOrder, setLatestNewOrder] = useState<Order | null>(null);
   const statuses = kitchenMode ? dineInStatuses : allStatuses;
 
   async function load() {
@@ -39,7 +43,18 @@ export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: {
     if (paymentStatus !== "ALL") params.set("paymentStatus", paymentStatus);
     const response = await fetch(`/api/admin/orders?${params}`, { cache: "no-store" });
     const data = await response.json();
-    setOrders(data.orders ?? []);
+    const nextOrders = (data.orders ?? []) as Order[];
+    setOrders(nextOrders);
+    setKnownOrderIds((current) => {
+      const nextIds = new Set(nextOrders.map((order) => order.id));
+      if (!current) return nextIds;
+      const freshOrders = nextOrders.filter((order) => !current.has(order.id));
+      if (freshOrders.length) {
+        setNewOrderCount((count) => count + freshOrders.length);
+        setLatestNewOrder(freshOrders[0]);
+      }
+      return nextIds;
+    });
   }
 
   async function updateStatus(id: string, status: string) {
@@ -66,8 +81,47 @@ export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: {
     return () => window.clearInterval(interval);
   }, [orderType, paymentStatus]);
 
+  useEffect(() => {
+    const originalTitle = document.title;
+    if (newOrderCount > 0) {
+      document.title = `(${newOrderCount}) New order - Saba Cafe`;
+    }
+    return () => {
+      document.title = originalTitle;
+    };
+  }, [newOrderCount]);
+
   return (
     <div className="mt-8 space-y-5">
+      {newOrderCount > 0 ? (
+        <div className="flex flex-col gap-3 rounded-lg border border-mint/20 bg-mint/10 p-4 text-date shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mint text-white">
+              <Bell size={18} />
+            </span>
+            <div>
+              <p className="font-semibold text-date">
+                {newOrderCount} new order{newOrderCount === 1 ? "" : "s"} received
+              </p>
+              <p className="mt-1 text-sm text-date/65">
+                {latestNewOrder
+                  ? `${latestNewOrder.orderNumber}${latestNewOrder.tableNumber ? ` from table ${latestNewOrder.tableNumber}` : ""} is waiting in Orders.`
+                  : "Open Orders or Kitchen to review it."}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setNewOrderCount(0);
+              setLatestNewOrder(null);
+            }}
+            className="focus-ring inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-date"
+          >
+            <X size={15} /> Clear
+          </button>
+        </div>
+      ) : null}
       <div className="rounded-lg border border-date/10 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap gap-2">
           {kitchenMode ? (

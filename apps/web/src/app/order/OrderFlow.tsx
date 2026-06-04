@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Bike, Clock, CreditCard, Heart, Minus, Plus, QrCode, ShoppingBag, Store } from "lucide-react";
+import { Bike, Clock, CreditCard, Minus, Plus, QrCode, ReceiptText, ShoppingBag, Store } from "lucide-react";
 import { MenuCard } from "@/components/MenuCard";
 import {
   businessInfo,
@@ -228,7 +228,7 @@ export function OrderFlow() {
   }
 
   return (
-    <main className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_390px] lg:px-8">
+    <main className="mx-auto grid max-w-7xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:px-8">
       <section>
         <div className="rounded-lg bg-date p-6 text-cream">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-saffron">Soft launch table ordering</p>
@@ -266,155 +266,172 @@ export function OrderFlow() {
         )}
       </section>
 
-      <aside className="h-fit rounded-lg border border-date/10 bg-white p-5 shadow-soft lg:sticky lg:top-24">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-3xl font-semibold text-date">Your order</h2>
-          <ShoppingBag className="text-clay" />
-        </div>
-        {dineInOnlyMode ? (
-          <div className="mt-5 rounded-lg border border-mint/20 bg-mint/10 p-4 text-sm leading-6 text-date">
-            <div className="flex items-center gap-2 font-semibold text-mint">
-              <QrCode size={18} /> Dine-in QR ordering only
+      <aside className="rounded-lg border border-date/10 bg-white shadow-soft lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:overscroll-contain">
+        <div className="sticky top-0 z-10 border-b border-date/10 bg-white/95 p-5 backdrop-blur">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-clay">Table order</p>
+              <h2 className="mt-1 font-display text-3xl font-semibold text-date">Your basket</h2>
             </div>
-            <p className="mt-2 text-date/70">Please confirm your table number, send your order, then pay at the counter.</p>
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-cream text-clay">
+              <ShoppingBag size={20} />
+            </span>
           </div>
-        ) : (
-          <>
-            <div className="mt-5 grid gap-2 sm:grid-cols-3">
-              <button
-                type="button"
-                onClick={() => selectOrderType("DINE_IN")}
-                disabled={settings.dineInEnabled === false}
-                className={`focus-ring rounded-md border px-3 py-3 text-sm font-semibold ${orderType === "DINE_IN" ? "border-date bg-date text-cream" : "border-date/15"}`}
-              >
-                <QrCode className="mx-auto mb-1" size={18} /> Dine-in
-              </button>
-              {settings.pickupEnabled ? (
-                <button
-                  type="button"
-                  onClick={() => selectOrderType("COLLECTION")}
-                  className={`focus-ring rounded-md border px-3 py-3 text-sm font-semibold ${orderType === "COLLECTION" ? "border-date bg-date text-cream" : "border-date/15"}`}
-                >
-                  <Store className="mx-auto mb-1" size={18} /> Collection
-                </button>
-              ) : null}
-              {settings.deliveryEnabled ? (
-                <button
-                  type="button"
-                  onClick={() => selectOrderType("DELIVERY")}
-                  className={`focus-ring rounded-md border px-3 py-3 text-sm font-semibold ${orderType === "DELIVERY" ? "border-date bg-date text-cream" : "border-date/15"}`}
-                >
-                  <Bike className="mx-auto mb-1" size={18} /> Delivery
-                </button>
-              ) : null}
-            </div>
-            {settings.deliveryEnabled ? (
-              <p className="mt-3 rounded-md bg-cream p-3 text-xs leading-5 text-date/65">
-                Delivery is available within {settings.deliveryRadiusMiles} miles of {businessInfo.formattedAddress}.
-                {settings.deliveryFeePerMilePence > 0 ? ` Fee: ${money(settings.deliveryFeePerMilePence)} per mile.` : " Delivery fee is set by staff."}
-              </p>
-            ) : null}
-          </>
-        )}
-
-        <div className="mt-5 space-y-3">
-          {cart.length ? (
-            cart.map((line) => (
-              <div key={line.menuItemId} className="rounded-md bg-cream p-3">
-                <div className="flex justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-date">{line.name}</p>
-                    <p className="text-sm text-date/60">{money(line.unitPricePence)} each</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button className="focus-ring rounded-full border border-date/15 p-1" onClick={() => changeQuantity(line.menuItemId, -1)} type="button">
-                      <Minus size={14} />
-                    </button>
-                    <span className="w-5 text-center text-sm font-semibold">{line.quantity}</span>
-                    <button className="focus-ring rounded-full border border-date/15 p-1" onClick={() => changeQuantity(line.menuItemId, 1)} type="button">
-                      <Plus size={14} />
-                    </button>
-                  </div>
-                </div>
-                <input
-                  aria-label={`Notes for ${line.name}`}
-                  placeholder="Notes for kitchen"
-                  className="focus-ring mt-3 w-full rounded-md border border-date/10 px-3 py-2 text-sm"
-                  onChange={(event) =>
-                    setCart((current) => current.map((candidate) => (candidate.menuItemId === line.menuItemId ? { ...candidate, notes: event.target.value } : candidate)))
-                  }
-                />
-              </div>
-            ))
-          ) : (
-            <p className="rounded-md bg-cream p-4 text-sm text-date/65">Add dishes to send your table order to the kitchen.</p>
-          )}
         </div>
 
-        <div className="mt-5 grid gap-3">
-          <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Name" value={customerName} onChange={(event) => setCustomerName(event.target.value)} />
-          {!dineInOnlyMode ? <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Email (optional)" value={email} onChange={(event) => setEmail(event.target.value)} /> : null}
-          <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder={orderType === "DINE_IN" ? "Phone (optional)" : "Phone"} value={phone} onChange={(event) => setPhone(event.target.value)} />
-          {orderType === "DINE_IN" ? (
-            <label className="text-sm font-semibold text-date/70">
-              Table number
-              <input className="focus-ring mt-1 w-full rounded-md border border-date/15 px-4 py-3 font-normal" placeholder="e.g. 12" value={tableNumber} onChange={(event) => setTableNumber(event.target.value)} />
-            </label>
-          ) : null}
-          {orderType === "DELIVERY" ? (
+        <div className="p-5">
+          {dineInOnlyMode ? (
+            <div className="rounded-lg border border-mint/20 bg-mint/10 p-4 text-sm leading-6 text-date">
+              <div className="flex items-center gap-2 font-semibold text-mint">
+                <QrCode size={18} /> Dine-in QR ordering only
+              </div>
+              <p className="mt-2 text-date/70">Send your order to the kitchen from the table, then pay at the counter.</p>
+            </div>
+          ) : (
             <>
-              <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Delivery address" value={addressLine1} onChange={(event) => setAddressLine1(event.target.value)} />
-              <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Postcode" value={postcode} onChange={(event) => setPostcode(event.target.value)} />
-              {postcode ? (
-                <p className={`rounded-md p-3 text-sm ${deliveryQuote?.allowed ? "bg-mint/10 text-mint" : "bg-red-50 text-red-700"}`}>
-                  {deliveryQuote?.allowed
-                    ? `Delivery approved: ${deliveryQuote.distanceMiles} miles away. Fee ${money(deliveryQuote.deliveryFeePence ?? 0)}.`
-                    : deliveryQuote?.reason ?? `Delivery must be within ${settings.deliveryRadiusMiles} miles.`}
+              <div className="grid gap-2 sm:grid-cols-3">
+                <button
+                  type="button"
+                  onClick={() => selectOrderType("DINE_IN")}
+                  disabled={settings.dineInEnabled === false}
+                  className={`focus-ring rounded-md border px-3 py-3 text-sm font-semibold ${orderType === "DINE_IN" ? "border-date bg-date text-cream" : "border-date/15"}`}
+                >
+                  <QrCode className="mx-auto mb-1" size={18} /> Dine-in
+                </button>
+                {settings.pickupEnabled ? (
+                  <button
+                    type="button"
+                    onClick={() => selectOrderType("COLLECTION")}
+                    className={`focus-ring rounded-md border px-3 py-3 text-sm font-semibold ${orderType === "COLLECTION" ? "border-date bg-date text-cream" : "border-date/15"}`}
+                  >
+                    <Store className="mx-auto mb-1" size={18} /> Collection
+                  </button>
+                ) : null}
+                {settings.deliveryEnabled ? (
+                  <button
+                    type="button"
+                    onClick={() => selectOrderType("DELIVERY")}
+                    className={`focus-ring rounded-md border px-3 py-3 text-sm font-semibold ${orderType === "DELIVERY" ? "border-date bg-date text-cream" : "border-date/15"}`}
+                  >
+                    <Bike className="mx-auto mb-1" size={18} /> Delivery
+                  </button>
+                ) : null}
+              </div>
+              {settings.deliveryEnabled ? (
+                <p className="mt-3 rounded-md bg-cream p-3 text-xs leading-5 text-date/65">
+                  Delivery is available within {settings.deliveryRadiusMiles} miles of {businessInfo.formattedAddress}.
+                  {settings.deliveryFeePerMilePence > 0 ? ` Fee: ${money(settings.deliveryFeePerMilePence)} per mile.` : " Delivery fee is set by staff."}
                 </p>
               ) : null}
-              <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Delivery notes" value={deliveryNotes} onChange={(event) => setDeliveryNotes(event.target.value)} />
             </>
-          ) : null}
-          {orderType !== "DINE_IN" ? <label className="text-sm font-semibold text-date/70">
-            <Clock className="mr-1 inline" size={15} /> ASAP or scheduled time
-            <input className="focus-ring mt-1 w-full rounded-md border border-date/15 px-4 py-3 font-normal" type="datetime-local" value={scheduledFor} onChange={(event) => setScheduledFor(event.target.value)} />
-          </label> : null}
-          {orderType !== "DINE_IN" ? <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Promo code" value={promoCode} onChange={(event) => setPromoCode(event.target.value)} /> : null}
-          {dineInOnlyMode ? (
-            <p className="rounded-md bg-saffron/15 p-3 text-sm font-semibold text-date">Payment: please pay at the counter after ordering.</p>
-          ) : (
-            <label className="text-sm font-semibold text-date/70">
-              Payment method
-              <select className="focus-ring mt-1 w-full rounded-md border border-date/15 px-4 py-3 font-normal" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}>
-                {settings.stripeEnabled !== false ? <option value="STRIPE_ONLINE">Pay online by card</option> : null}
-                {orderType === "DINE_IN" && settings.payInStoreEnabled !== false ? <option value="PAY_IN_STORE">Pay in store</option> : null}
-                {orderType === "COLLECTION" && settings.cashOnCollectionEnabled !== false ? <option value="CASH_ON_COLLECTION">Cash / pay on collection</option> : null}
-                {orderType === "DELIVERY" && settings.cashOnDeliveryEnabled ? <option value="CASH_ON_DELIVERY">Cash on delivery</option> : null}
-              </select>
-            </label>
           )}
-        </div>
 
-        <div className="mt-5 space-y-2 border-t border-date/10 pt-5 text-sm">
-          <div className="flex justify-between"><span>Subtotal</span><span>{money(totals.subtotalPence)}</span></div>
-          {totals.discountPence ? <div className="flex justify-between"><span>Discount</span><span>-{money(totals.discountPence)}</span></div> : null}
-          {totals.deliveryFeePence ? <div className="flex justify-between"><span>Delivery</span><span>{money(totals.deliveryFeePence)}</span></div> : null}
-          <div className="flex justify-between"><span>VAT included</span><span>{money(totals.vatPence)}</span></div>
-          <div className="flex justify-between text-lg font-semibold text-date"><span>Total</span><span>{money(totals.totalPence)}</span></div>
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-date/55">
+            <span className="rounded-md bg-cream px-2 py-2">Add food</span>
+            <span className="rounded-md bg-cream px-2 py-2">Send order</span>
+            <span className="rounded-md bg-cream px-2 py-2">Pay counter</span>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            {cart.length ? (
+              cart.map((line) => (
+                <div key={line.menuItemId} className="rounded-lg border border-date/10 bg-cream/80 p-3">
+                  <div className="flex justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-date">{line.name}</p>
+                      <p className="text-sm text-date/60">{money(line.unitPricePence)} each</p>
+                    </div>
+                    <div className="flex h-9 items-center gap-2 rounded-full bg-white px-2">
+                      <button className="focus-ring rounded-full border border-date/15 p-1" onClick={() => changeQuantity(line.menuItemId, -1)} type="button">
+                        <Minus size={14} />
+                      </button>
+                      <span className="w-5 text-center text-sm font-semibold">{line.quantity}</span>
+                      <button className="focus-ring rounded-full border border-date/15 p-1" onClick={() => changeQuantity(line.menuItemId, 1)} type="button">
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  <input
+                    aria-label={`Notes for ${line.name}`}
+                    placeholder="Notes for kitchen"
+                    className="focus-ring mt-3 w-full rounded-md border border-date/10 bg-white px-3 py-2 text-sm"
+                    onChange={(event) =>
+                      setCart((current) => current.map((candidate) => (candidate.menuItemId === line.menuItemId ? { ...candidate, notes: event.target.value } : candidate)))
+                    }
+                  />
+                </div>
+              ))
+            ) : (
+              <div className="rounded-lg border border-dashed border-date/15 bg-cream p-5 text-center">
+                <ReceiptText className="mx-auto text-clay" size={24} />
+                <p className="mt-3 text-sm font-semibold text-date">Your basket is empty</p>
+                <p className="mt-1 text-sm text-date/60">Add dishes from the menu to send your table order to the kitchen.</p>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-5 grid gap-3">
+            <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Name" value={customerName} onChange={(event) => setCustomerName(event.target.value)} />
+            {!dineInOnlyMode ? <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Email (optional)" value={email} onChange={(event) => setEmail(event.target.value)} /> : null}
+            <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder={orderType === "DINE_IN" ? "Phone (optional)" : "Phone"} value={phone} onChange={(event) => setPhone(event.target.value)} />
+            {orderType === "DINE_IN" ? (
+              <label className="text-sm font-semibold text-date/70">
+                Table number
+                <input className="focus-ring mt-1 w-full rounded-md border border-date/15 px-4 py-3 font-normal" placeholder="e.g. 12" value={tableNumber} onChange={(event) => setTableNumber(event.target.value)} />
+              </label>
+            ) : null}
+            {orderType === "DELIVERY" ? (
+              <>
+                <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Delivery address" value={addressLine1} onChange={(event) => setAddressLine1(event.target.value)} />
+                <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Postcode" value={postcode} onChange={(event) => setPostcode(event.target.value)} />
+                {postcode ? (
+                  <p className={`rounded-md p-3 text-sm ${deliveryQuote?.allowed ? "bg-mint/10 text-mint" : "bg-red-50 text-red-700"}`}>
+                    {deliveryQuote?.allowed
+                      ? `Delivery approved: ${deliveryQuote.distanceMiles} miles away. Fee ${money(deliveryQuote.deliveryFeePence ?? 0)}.`
+                      : deliveryQuote?.reason ?? `Delivery must be within ${settings.deliveryRadiusMiles} miles.`}
+                  </p>
+                ) : null}
+                <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Delivery notes" value={deliveryNotes} onChange={(event) => setDeliveryNotes(event.target.value)} />
+              </>
+            ) : null}
+            {orderType !== "DINE_IN" ? <label className="text-sm font-semibold text-date/70">
+              <Clock className="mr-1 inline" size={15} /> ASAP or scheduled time
+              <input className="focus-ring mt-1 w-full rounded-md border border-date/15 px-4 py-3 font-normal" type="datetime-local" value={scheduledFor} onChange={(event) => setScheduledFor(event.target.value)} />
+            </label> : null}
+            {orderType !== "DINE_IN" ? <input className="focus-ring rounded-md border border-date/15 px-4 py-3" placeholder="Promo code" value={promoCode} onChange={(event) => setPromoCode(event.target.value)} /> : null}
+            {dineInOnlyMode ? (
+              <p className="rounded-md bg-saffron/15 p-3 text-sm font-semibold text-date">Payment: please pay at the counter after ordering.</p>
+            ) : (
+              <label className="text-sm font-semibold text-date/70">
+                Payment method
+                <select className="focus-ring mt-1 w-full rounded-md border border-date/15 px-4 py-3 font-normal" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}>
+                  {settings.stripeEnabled !== false ? <option value="STRIPE_ONLINE">Pay online by card</option> : null}
+                  {orderType === "DINE_IN" && settings.payInStoreEnabled !== false ? <option value="PAY_IN_STORE">Pay in store</option> : null}
+                  {orderType === "COLLECTION" && settings.cashOnCollectionEnabled !== false ? <option value="CASH_ON_COLLECTION">Cash / pay on collection</option> : null}
+                  {orderType === "DELIVERY" && settings.cashOnDeliveryEnabled ? <option value="CASH_ON_DELIVERY">Cash on delivery</option> : null}
+                </select>
+              </label>
+            )}
+          </div>
+
+          <div className="mt-5 space-y-2 rounded-lg border border-date/10 bg-white p-4 text-sm">
+            <div className="flex justify-between"><span>Subtotal</span><span>{money(totals.subtotalPence)}</span></div>
+            {totals.discountPence ? <div className="flex justify-between"><span>Discount</span><span>-{money(totals.discountPence)}</span></div> : null}
+            {totals.deliveryFeePence ? <div className="flex justify-between"><span>Delivery</span><span>{money(totals.deliveryFeePence)}</span></div> : null}
+            <div className="flex justify-between"><span>VAT included</span><span>{money(totals.vatPence)}</span></div>
+            <div className="flex justify-between border-t border-date/10 pt-2 text-lg font-semibold text-date"><span>Total</span><span>{money(totals.totalPence)}</span></div>
+          </div>
+          {error ? <p className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
+          <button
+            type="button"
+            onClick={submitOrder}
+            disabled={loading}
+            className="focus-ring mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-mint px-5 py-4 font-semibold text-white disabled:opacity-60"
+          >
+            {paymentMethod === "STRIPE_ONLINE" && !dineInOnlyMode ? <CreditCard size={18} /> : <QrCode size={18} />}
+            {loading ? "Sending order..." : paymentMethod === "STRIPE_ONLINE" && !dineInOnlyMode ? "Pay securely" : "Send table order"}
+          </button>
         </div>
-        {error ? <p className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-        <button
-          type="button"
-          onClick={submitOrder}
-          disabled={loading}
-          className="focus-ring mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-mint px-5 py-4 font-semibold text-white disabled:opacity-60"
-        >
-          {paymentMethod === "STRIPE_ONLINE" && !dineInOnlyMode ? <CreditCard size={18} /> : <QrCode size={18} />}
-          {loading ? "Sending order..." : paymentMethod === "STRIPE_ONLINE" && !dineInOnlyMode ? "Pay securely" : "Send table order"}
-        </button>
-        {!dineInOnlyMode ? <button type="button" className="focus-ring mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-date/15 px-5 py-3 font-semibold text-date">
-          <Heart size={17} /> Save as favourite
-        </button> : null}
       </aside>
     </main>
   );
