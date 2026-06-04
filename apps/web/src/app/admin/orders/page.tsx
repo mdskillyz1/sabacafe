@@ -5,8 +5,8 @@ export default function AdminOrdersPage() {
   return (
     <AdminPageShell
       eyebrow="Live orders"
-      title="Update order status in real time."
-      description="This connects to the same shared order API used by the customer website. Staff can manage order progress while payment status remains separate."
+      title="Orders"
+      description="Manage table orders, payment state, and kitchen progress from one clear screen."
       breadcrumbs={[{ label: "Orders" }]}
       backLabel="Back to overview"
     >

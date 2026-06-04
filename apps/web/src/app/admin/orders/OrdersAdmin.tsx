@@ -28,6 +28,25 @@ const dineInStatuses = ["RECEIVED", "PREPARING", "READY", "SERVED", "COMPLETED",
 const orderFilters = ["ALL", "DINE_IN", "COLLECTION", "DELIVERY"];
 const paymentFilters = ["ALL", "PENDING_PAYMENT", "PAID", "PAY_IN_STORE", "PENDING", "FAILED", "REFUNDED"];
 const statusFilters = ["ALL", "RECEIVED", "PREPARING", "READY", "SERVED", "COMPLETED", "CANCELLED"];
+const orderLabels: Record<string, string> = { ALL: "All", DINE_IN: "Dine-in", COLLECTION: "Collection", DELIVERY: "Delivery" };
+const paymentLabels: Record<string, string> = {
+  ALL: "All",
+  PENDING_PAYMENT: "Counter payment",
+  PAID: "Paid",
+  PAY_IN_STORE: "Pay in store",
+  PENDING: "Pending",
+  FAILED: "Failed",
+  REFUNDED: "Refunded"
+};
+const statusLabels: Record<string, string> = {
+  ALL: "All",
+  RECEIVED: "Received",
+  PREPARING: "Preparing",
+  READY: "Ready",
+  SERVED: "Served",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled"
+};
 
 function nextKitchenAction(status: string) {
   if (status === "RECEIVED") return { next: "PREPARING", label: "Start preparing", icon: Flame, tone: "bg-date text-cream" };
@@ -35,6 +54,42 @@ function nextKitchenAction(status: string) {
   if (status === "READY") return { next: "SERVED", label: "Mark served", icon: CheckCircle2, tone: "bg-mint text-white" };
   if (status === "SERVED") return { next: "COMPLETED", label: "Complete", icon: CheckCircle2, tone: "bg-date text-cream" };
   return null;
+}
+
+function FilterGroup({
+  title,
+  options,
+  value,
+  onChange,
+  labels,
+  activeClassName
+}: {
+  title: string;
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+  labels: Record<string, string>;
+  activeClassName: string;
+}) {
+  return (
+    <section className="rounded-lg border border-date/10 bg-white p-4 shadow-sm">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-date/45">{title}</p>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => onChange(option)}
+            className={`saba-status-button rounded-full px-4 py-2 text-sm font-semibold transition hover:scale-[1.03] active:scale-[0.98] ${
+              value === option ? activeClassName : "bg-cream text-date"
+            }`}
+          >
+            {labels[option] ?? option.replaceAll("_", " ")}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: { initialOrderType?: string; kitchenMode?: boolean }) {
@@ -48,6 +103,14 @@ export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: {
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [exitingOrderIds, setExitingOrderIds] = useState<Set<string>>(new Set());
   const statuses = kitchenMode ? dineInStatuses : allStatuses;
+  const liveOrders = orders.filter((order) => !["COMPLETED", "CANCELLED"].includes(order.status ?? order.orderStatus)).length;
+  const paidOrders = orders.filter((order) => order.paymentStatus === "PAID").length;
+  const counterPaymentOrders = orders.filter((order) => order.paymentStatus === "PENDING_PAYMENT" || order.paymentMethod === "PAY_IN_STORE").length;
+  const summaryCards = [
+    { label: "Showing", value: orders.length, helper: "orders in this view" },
+    { label: "Live kitchen", value: liveOrders, helper: "not completed" },
+    { label: "Counter payment", value: counterPaymentOrders, helper: "pay at counter" }
+  ];
 
   async function load() {
     const params = new URLSearchParams();
@@ -157,27 +220,43 @@ export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: {
           </button>
         </div>
       ) : null}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {summaryCards.map(({ label, value, helper }) => (
+          <div key={label} className="rounded-lg border border-date/10 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-date/45">{label}</p>
+            <p className="mt-2 font-display text-3xl font-semibold text-date">{value}</p>
+            <p className="mt-1 text-sm text-date/55">{helper}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[0.8fr_1fr_1fr]">
+        {kitchenMode ? (
+          <section className="rounded-lg border border-date/10 bg-white p-4 shadow-sm xl:col-span-3">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-date/45">Current view</p>
+            <span className="inline-flex rounded-full bg-date px-4 py-2 text-sm font-semibold text-cream">Dine-in kitchen view</span>
+          </section>
+        ) : (
+          <>
+            <FilterGroup title="Order type" options={orderFilters} value={orderType} onChange={setOrderType} labels={orderLabels} activeClassName="bg-date text-cream" />
+            <FilterGroup title="Payment" options={paymentFilters} value={paymentStatus} onChange={setPaymentStatus} labels={paymentLabels} activeClassName="bg-mint text-white" />
+            <FilterGroup title="Progress" options={statusFilters} value={statusFilter} onChange={setStatusFilter} labels={statusLabels} activeClassName="bg-saffron text-date" />
+          </>
+        )}
+      </div>
+
       <div className="rounded-lg border border-date/10 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap gap-2">
-          {kitchenMode ? (
-            <span className="rounded-full bg-date px-4 py-2 text-sm font-semibold text-cream">Dine-in kitchen view</span>
-          ) : (
-            orderFilters.map((filter) => (
-              <button key={filter} onClick={() => setOrderType(filter)} className={`saba-status-button rounded-full px-4 py-2 text-sm font-semibold transition hover:scale-[1.03] active:scale-[0.98] ${orderType === filter ? "bg-date text-cream" : "bg-cream text-date"}`}>
-                {filter === "ALL" ? "All orders" : filter.replace("_", "-")}
-              </button>
-            ))
-          )}
-          {!kitchenMode ? paymentFilters.map((filter) => (
-            <button key={filter} onClick={() => setPaymentStatus(filter)} className={`saba-status-button rounded-full px-4 py-2 text-sm font-semibold transition hover:scale-[1.03] active:scale-[0.98] ${paymentStatus === filter ? "bg-mint text-white" : "bg-cream text-date"}`}>
-              {filter === "PENDING_PAYMENT" ? "Pending counter payment" : filter}
-            </button>
-          )) : null}
-          {!kitchenMode ? statusFilters.map((filter) => (
-            <button key={filter} onClick={() => setStatusFilter(filter)} className={`saba-status-button rounded-full px-4 py-2 text-sm font-semibold transition hover:scale-[1.03] active:scale-[0.98] ${statusFilter === filter ? "bg-saffron text-date" : "bg-cream text-date"}`}>
-              {filter === "ALL" ? "All statuses" : filter.replaceAll("_", " ")}
-            </button>
-          )) : null}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-date">Order list</p>
+            <p className="text-sm text-date/55">
+              {kitchenMode ? "Only live kitchen orders appear here. Completed and cancelled orders are hidden." : "Use the filters above to narrow the list quickly."}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs font-semibold text-date/55">
+            <span className="rounded-full bg-cream px-3 py-1">{paidOrders} paid</span>
+            <span className="rounded-full bg-saffron/20 px-3 py-1">{counterPaymentOrders} counter payment</span>
+          </div>
         </div>
       </div>
       <div className="overflow-hidden rounded-lg border border-date/10 bg-white shadow-sm">
