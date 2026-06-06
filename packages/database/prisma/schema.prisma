@@ -475,6 +475,17 @@ model AppSettings {
   deliveryPaused         Boolean @default(false)
   pickupPaused           Boolean @default(false)
   cashEnabled            Boolean @default(false)
+  pickupEnabled          Boolean @default(false)
+  deliveryEnabled        Boolean @default(false)
+  dineInEnabled          Boolean @default(true)
+  stripeEnabled          Boolean @default(false)
+  payInStoreEnabled      Boolean @default(true)
+  cashOnCollectionEnabled Boolean @default(false)
+  cashOnDeliveryEnabled  Boolean @default(false)
+  deliveryRadiusMiles    Float   @default(5)
+  deliveryFeePerMilePence Int     @default(0)
+  originPostcode         String?
+  prepTimeMinutes        Int     @default(15)
   vatRate                Float   @default(0.2)
   minimumOrderPence      Int     @default(1200)
   appStoreUrl            String?

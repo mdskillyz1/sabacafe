@@ -25,6 +25,7 @@ docs/
 - Stripe Checkout and PaymentIntent routes. Online card payments require Stripe keys; offline pay-in-store/cash methods can be enabled from admin.
 - Stripe webhook route for payment success/failure.
 - Admin order dashboard and kitchen view with filters for dine-in, collection, delivery, payment state, and status updates.
+- Orders, order items, payments, operational settings, website events, and admin activity logs are stored in PostgreSQL/Neon when `DATABASE_URL` is configured. Vercel filesystem fallbacks are only for local development and must not be treated as permanent business records.
 - Table booking flow with customer guest-size selection, admin-controlled availability, pending approvals, table management, blocked dates, blocked slots, and special hours.
 - Dynamic footer/business info system with admin-managed business name, copyright, address, email, phone, opening hours text, and social links.
 - Production-ready legal pages and footer compliance links for terms, privacy, cookies, refunds, delivery, accessibility, and contact.
@@ -77,7 +78,17 @@ MINIMUM_ORDER_PENCE           Default 1200
 
 For Vercel, `NEXT_PUBLIC_SITE_URL` is recommended for correct social preview URLs, but the app also falls back to Vercel's `VERCEL_URL` so the homepage can render without it. Stripe and Google variables are optional for the temporary preview path. Missing Stripe values disable online card payment startup; orders are only marked paid after a confirmed Stripe webhook.
 
-Menu management requires `DATABASE_URL` for real saving. If it is missing, the admin menu page shows a setup message and save/publish buttons are disabled. Run `PATH="$PWD/tools:$PATH" ./tools/pnpm db:push` after adding the database URL so the `MenuItem.published` column exists before staff publish dishes. Local JSON fallbacks are only for read-only development previews and are not used as a production menu-saving workaround.
+Menu, ordering, operations settings, analytics, and admin activity persistence require `DATABASE_URL`. If it is missing, the admin menu page shows a setup message and save/publish buttons are disabled. Run `PATH="$PWD/tools:$PATH" ./tools/pnpm db:push` after adding the database URL so the latest columns exist before staff publish dishes or run live service. Local JSON fallbacks are only for read-only development previews and are not used as a production-saving workaround.
+
+### Neon / Vercel Persistence
+
+Neon is a good fit for this project. It provides managed PostgreSQL that works well with Vercel and Prisma. Use the pooled Neon connection string as `DATABASE_URL` in Vercel Production and Preview environments. Keep the unpooled URL available only for direct maintenance tasks if Neon/Vercel exposes it separately.
+
+For production records:
+- Do not store orders, payments, activity logs, settings, or bookings on the Vercel filesystem.
+- Do not hard-delete completed orders. Cancel or complete orders so the history remains available for reporting.
+- Enable Neon backups/PITR if the restaurant depends on the data daily. Neon free tiers are useful for testing, but paid storage/backup features may be needed once real order volume grows.
+- Export order history from the admin/database regularly if the business needs offline accounting records.
 
 Admin menu images are uploaded through `/api/admin/menu/upload`, validated as JPG/PNG/WebP up to 5MB, resized in the browser where possible, and stored with the menu item as a data URL. This avoids Vercel filesystem storage. For a larger production catalogue, replace that endpoint with Vercel Blob, Cloudinary, or Supabase Storage while keeping the saved `image` URL field.
 
