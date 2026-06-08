@@ -36,6 +36,7 @@ export function OrderFlow() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [items, setItems] = useState<MenuItem[]>([]);
+  const [menuLoading, setMenuLoading] = useState(true);
   const [menuPublished, setMenuPublished] = useState(false);
   const [lastAdded, setLastAdded] = useState("");
   const [cartPulse, setCartPulse] = useState(false);
@@ -79,7 +80,8 @@ export function OrderFlow() {
       .then((menu) => {
         setItems(menu.items ?? []);
         setMenuPublished(Boolean(menu.published));
-      });
+      })
+      .finally(() => setMenuLoading(false));
     fetch("/api/settings", { cache: "no-store" })
       .then((response) => response.json())
       .then((data) => {
@@ -278,7 +280,28 @@ export function OrderFlow() {
             Scan the QR code, add your food, send the order to the kitchen, and a staff member will prepare it shortly.
           </p>
         </div>
-        {!menuPublished || !items.length ? (
+        {menuLoading ? (
+          <div className="mt-8 rounded-lg border border-date/10 bg-white p-8 shadow-sm" aria-live="polite">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-clay">Loading menu</p>
+            <h2 className="mt-2 font-display text-4xl font-semibold text-date">Getting the table menu ready.</h2>
+            <p className="mx-auto mt-4 max-w-2xl leading-7 text-date/70">
+              Saba Cafe&apos;s live menu is loading. You&apos;ll be able to add dishes in just a moment.
+            </p>
+            <div className="mt-8 space-y-5">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="grid overflow-hidden rounded-lg border border-date/10 bg-white shadow-sm sm:grid-cols-[180px_1fr]">
+                  <div className="min-h-48 animate-pulse bg-cream" />
+                  <div className="space-y-4 p-5">
+                    <div className="h-7 w-2/3 animate-pulse rounded-full bg-cream" />
+                    <div className="h-4 w-full animate-pulse rounded-full bg-cream" />
+                    <div className="h-4 w-3/4 animate-pulse rounded-full bg-cream" />
+                    <div className="h-10 w-36 animate-pulse rounded-full bg-cream" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : !menuPublished || !items.length ? (
           <div className="mt-8 rounded-lg border border-date/10 bg-white p-8 text-center shadow-sm">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-clay">Ordering not available</p>
             <h2 className="mt-2 font-display text-4xl font-semibold text-date">The online menu has not been published yet.</h2>

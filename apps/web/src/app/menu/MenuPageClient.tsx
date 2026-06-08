@@ -46,6 +46,29 @@ export function MenuPageClient() {
         </div>
       </div>
 
+      {loading ? (
+        <section className="mt-10 rounded-lg border border-date/10 bg-white p-8 shadow-sm" aria-live="polite">
+          <div className="max-w-2xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-clay">Loading menu</p>
+            <h2 className="mt-2 font-display text-4xl font-semibold text-date">Preparing today&apos;s Saba Cafe menu.</h2>
+            <p className="mt-4 leading-7 text-date/70">Fresh dishes are loading now. This usually takes just a moment.</p>
+          </div>
+          <div className="mt-8 grid gap-5 lg:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="grid overflow-hidden rounded-lg border border-date/10 bg-white shadow-sm sm:grid-cols-[180px_1fr]">
+                <div className="min-h-48 animate-pulse bg-cream" />
+                <div className="space-y-4 p-5">
+                  <div className="h-7 w-2/3 animate-pulse rounded-full bg-cream" />
+                  <div className="h-4 w-full animate-pulse rounded-full bg-cream" />
+                  <div className="h-4 w-3/4 animate-pulse rounded-full bg-cream" />
+                  <div className="h-10 w-36 animate-pulse rounded-full bg-cream" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {!loading && !hasMenu ? (
         <section className="mt-10 rounded-lg border border-date/10 bg-white p-8 text-center shadow-sm">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-clay">Menu not available</p>
