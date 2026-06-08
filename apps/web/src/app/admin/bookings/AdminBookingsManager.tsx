@@ -27,6 +27,17 @@ const emptyStore: BookingStore = {
   specialOpeningHours: [],
   bookings: []
 };
+const sabaDefaultTables: RestaurantTable[] = [
+  { id: "table-01", name: "Table 01", capacity: 4, active: true },
+  { id: "table-05", name: "Table 05", capacity: 4, active: true },
+  { id: "table-09", name: "Table 09", capacity: 4, active: true },
+  { id: "table-14", name: "Table 14", capacity: 4, active: true },
+  { id: "table-18", name: "Table 18", capacity: 4, active: true },
+  { id: "table-36", name: "Table 36", capacity: 4, active: true },
+  { id: "table-33", name: "Table 33", capacity: 4, active: true },
+  { id: "table-27", name: "Table 27", capacity: 4, active: true },
+  { id: "table-22", name: "Table 22", capacity: 4, active: true }
+];
 
 function uid(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -62,17 +73,34 @@ export function AdminBookingsManager() {
     return statuses.map((entry) => ({ status: entry, count: bookings.filter((booking) => booking.status === entry).length }));
   }, [bookings]);
 
-  async function saveSettings() {
+  async function saveStore(nextStore: BookingStore, successMessage = "Booking settings saved.") {
     setSaving(true);
     setMessage("");
-    const response = await fetch("/api/admin/bookings/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(store)
-    });
-    setStore(await response.json());
-    setSaving(false);
-    setMessage("Booking settings saved.");
+    try {
+      const response = await fetch("/api/admin/bookings/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nextStore)
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Booking settings could not be saved.");
+      setStore(data);
+      setMessage(successMessage);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Booking settings could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveSettings() {
+    await saveStore(store);
+  }
+
+  async function useSabaTables() {
+    const nextStore = { ...store, tables: sabaDefaultTables };
+    setStore(nextStore);
+    await saveStore(nextStore, "Saba Cafe default tables saved.");
   }
 
   async function changeStatus(id: string, nextStatus: BookingStatus, adminNotes?: string) {
@@ -220,13 +248,31 @@ export function AdminBookingsManager() {
             <h2 className="font-display text-3xl font-semibold text-date">Table management</h2>
             <p className="text-sm text-date/60">Active tables are used by bookings and QR dine-in ordering.</p>
           </div>
-          <button
-            type="button"
-            onClick={() => setStore((current) => ({ ...current, tables: [...current.tables, { id: uid("table"), name: "New table", capacity: 2, active: true }] }))}
-            className="focus-ring inline-flex items-center gap-2 rounded-full border border-date/15 px-4 py-3 font-semibold text-date"
-          >
-            <Plus size={17} /> Add table
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={useSabaTables}
+              disabled={saving}
+              className="focus-ring inline-flex items-center gap-2 rounded-full border border-date/15 px-4 py-3 font-semibold text-date"
+            >
+              Use Saba tables
+            </button>
+            <button
+              type="button"
+              onClick={() => setStore((current) => ({ ...current, tables: [...current.tables, { id: uid("table"), name: "New table", capacity: 2, active: true }] }))}
+              className="focus-ring inline-flex items-center gap-2 rounded-full border border-date/15 px-4 py-3 font-semibold text-date"
+            >
+              <Plus size={17} /> Add table
+            </button>
+            <button
+              type="button"
+              onClick={saveSettings}
+              disabled={saving}
+              className="focus-ring inline-flex items-center gap-2 rounded-full bg-date px-4 py-3 font-semibold text-cream disabled:opacity-60"
+            >
+              <Save size={17} /> {saving ? "Saving..." : "Save tables"}
+            </button>
+          </div>
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           {store.tables.map((table) => (

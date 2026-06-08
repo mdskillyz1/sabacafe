@@ -20,15 +20,21 @@ const bookingBlocks = new Set<BookingStatus>(["PENDING", "CONFIRMED", "SEATED"])
 let writeQueue = Promise.resolve();
 
 const defaultAvailability = [] satisfies BookingAvailabilityRule[];
+const sabaDefaultTables = [
+  { id: "table-01", name: "Table 01", capacity: 4, active: true },
+  { id: "table-05", name: "Table 05", capacity: 4, active: true },
+  { id: "table-09", name: "Table 09", capacity: 4, active: true },
+  { id: "table-14", name: "Table 14", capacity: 4, active: true },
+  { id: "table-18", name: "Table 18", capacity: 4, active: true },
+  { id: "table-36", name: "Table 36", capacity: 4, active: true },
+  { id: "table-33", name: "Table 33", capacity: 4, active: true },
+  { id: "table-27", name: "Table 27", capacity: 4, active: true },
+  { id: "table-22", name: "Table 22", capacity: 4, active: true }
+];
 
 const defaultStore = (): BookingStore => ({
   updatedAt: new Date().toISOString(),
-  tables: [
-    { id: "table-1", name: "Table 1", capacity: 2, active: true },
-    { id: "table-2", name: "Table 2", capacity: 4, active: true },
-    { id: "table-3", name: "Table 3", capacity: 4, active: true },
-    { id: "table-family", name: "Family table", capacity: 6, active: true }
-  ],
+  tables: sabaDefaultTables,
   availability: defaultAvailability,
   blockedDates: [],
   blockedTimeSlots: [],
