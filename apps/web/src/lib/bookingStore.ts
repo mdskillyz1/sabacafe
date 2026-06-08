@@ -11,11 +11,12 @@ import type {
 } from "@saba/shared";
 
 const storeFileName = "booking-store.json";
-const candidateStorePaths = [
+const runtimeStorePath = path.join("/tmp", "saba-cafe", storeFileName);
+const bundledStorePaths = [
   path.join(process.cwd(), "data", storeFileName),
-  path.join(process.cwd(), "apps", "web", "data", storeFileName),
-  path.join("/tmp", "saba-cafe", storeFileName)
+  path.join(process.cwd(), "apps", "web", "data", storeFileName)
 ];
+const candidateStorePaths = process.env.VERCEL ? [runtimeStorePath, ...bundledStorePaths] : [...bundledStorePaths, runtimeStorePath];
 const bookingBlocks = new Set<BookingStatus>(["PENDING", "CONFIRMED", "SEATED"]);
 let writeQueue = Promise.resolve();
 
@@ -29,7 +30,8 @@ const sabaDefaultTables = [
   { id: "table-36", name: "Table 36", capacity: 4, active: true },
   { id: "table-33", name: "Table 33", capacity: 4, active: true },
   { id: "table-27", name: "Table 27", capacity: 4, active: true },
-  { id: "table-22", name: "Table 22", capacity: 4, active: true }
+  { id: "table-22", name: "Table 22", capacity: 4, active: true },
+  { id: "takeaway", name: "Takeaway", capacity: 1, active: true }
 ];
 
 const defaultStore = (): BookingStore => ({
@@ -101,6 +103,12 @@ function sortTables(tables: RestaurantTable[]) {
   return [...tables].sort((a, b) => a.capacity - b.capacity || a.name.localeCompare(b.name));
 }
 
+function withRequiredTables(tables: RestaurantTable[]) {
+  const tableIds = new Set(tables.map((table) => table.id));
+  const required = sabaDefaultTables.filter((table) => table.id === "takeaway" && !tableIds.has(table.id));
+  return required.length ? [...tables, ...required] : tables;
+}
+
 export async function readBookingStore(): Promise<BookingStore> {
   try {
     const raw = await readFirstAvailableStore();
@@ -108,7 +116,7 @@ export async function readBookingStore(): Promise<BookingStore> {
     return {
       ...defaultStore(),
       ...parsed,
-      tables: parsed.tables ?? defaultStore().tables,
+      tables: withRequiredTables(parsed.tables ?? defaultStore().tables),
       availability: parsed.availability ?? defaultAvailability,
       blockedDates: parsed.blockedDates ?? [],
       blockedTimeSlots: parsed.blockedTimeSlots ?? [],
@@ -186,7 +194,7 @@ function occupiedTableIds(store: BookingStore, date: string, startTime: string, 
 export function getAvailableSlotsFromStore(store: BookingStore, date: string, partySize: number): BookingSlot[] {
   const rule = ruleForDate(store, date);
   if (!rule?.open || isDateBlocked(store, date) || partySize > rule.maxPartySize) return [];
-  const activeTables = sortTables(store.tables.filter((table) => table.active && table.capacity >= partySize));
+  const activeTables = sortTables(store.tables.filter((table) => table.active && table.id !== "takeaway" && table.capacity >= partySize));
   if (!activeTables.length) return [];
 
   const slots: BookingSlot[] = [];

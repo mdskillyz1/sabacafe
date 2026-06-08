@@ -36,7 +36,8 @@ const sabaDefaultTables: RestaurantTable[] = [
   { id: "table-36", name: "Table 36", capacity: 4, active: true },
   { id: "table-33", name: "Table 33", capacity: 4, active: true },
   { id: "table-27", name: "Table 27", capacity: 4, active: true },
-  { id: "table-22", name: "Table 22", capacity: 4, active: true }
+  { id: "table-22", name: "Table 22", capacity: 4, active: true },
+  { id: "takeaway", name: "Takeaway", capacity: 1, active: true }
 ];
 
 function uid(prefix: string) {
