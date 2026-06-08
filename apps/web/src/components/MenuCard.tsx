@@ -5,7 +5,17 @@ import { Badge } from "./Badge";
 import { FoodImage } from "./FoodImage";
 import { money, type MenuItem } from "@saba/shared";
 
-export function MenuCard({ item, onAdd, compact = false }: { item: MenuItem; onAdd?: (item: MenuItem) => void; compact?: boolean }) {
+export function MenuCard({
+  item,
+  onAdd,
+  compact = false,
+  quantity = 0
+}: {
+  item: MenuItem;
+  onAdd?: (item: MenuItem) => void;
+  compact?: boolean;
+  quantity?: number;
+}) {
   return (
     <article className={`grid overflow-hidden rounded-lg border border-date/10 bg-white shadow-sm ${compact ? "" : "sm:grid-cols-[180px_1fr]"}`}>
       <FoodImage label={item.name} src={item.image} className={compact ? "min-h-48" : "min-h-48 sm:min-h-full"} />
@@ -31,9 +41,11 @@ export function MenuCard({ item, onAdd, compact = false }: { item: MenuItem; onA
             type="button"
             disabled={!item.available}
             onClick={() => onAdd(item)}
-            className="focus-ring mt-auto rounded-full bg-date px-4 py-3 text-sm font-semibold text-cream disabled:cursor-not-allowed disabled:bg-date/30"
+            className={`focus-ring mt-auto rounded-full px-4 py-3 text-sm font-semibold text-cream transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-date/30 ${
+              quantity > 0 ? "bg-mint" : "bg-date"
+            }`}
           >
-            {item.available ? "Add to cart" : "Unavailable"}
+            {item.available ? (quantity > 0 ? `Added x${quantity}` : "Add to basket") : "Unavailable"}
           </button>
         ) : (
           <Link

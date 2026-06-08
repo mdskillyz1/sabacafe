@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Bike, Clock, CreditCard, Minus, Plus, QrCode, ReceiptText, ShoppingBag, Store } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Bike, CheckCircle2, Clock, CreditCard, Minus, Plus, QrCode, ReceiptText, ShoppingBag, Store } from "lucide-react";
 import { MenuCard } from "@/components/MenuCard";
 import {
   businessInfo,
@@ -18,6 +18,7 @@ import {
 } from "@saba/shared";
 
 export function OrderFlow() {
+  const basketRef = useRef<HTMLElement | null>(null);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [fulfilmentType, setFulfilmentType] = useState<FulfilmentType>("PICKUP");
   const [orderType, setOrderType] = useState<OrderType>("DINE_IN");
@@ -36,6 +37,8 @@ export function OrderFlow() {
   const [error, setError] = useState("");
   const [items, setItems] = useState<MenuItem[]>([]);
   const [menuPublished, setMenuPublished] = useState(false);
+  const [lastAdded, setLastAdded] = useState("");
+  const [cartPulse, setCartPulse] = useState(false);
   const [settings, setSettings] = useState<OperationsSettings>({
     pickupEnabled: false,
     deliveryEnabled: false,
@@ -119,8 +122,27 @@ export function OrderFlow() {
     () => calculatePrice(cart, items, fulfilmentType, promoCode, 0.2, settings.minimumOrderPence ?? 1200, deliveryFeePence),
     [cart, fulfilmentType, promoCode, items, deliveryFeePence, settings.minimumOrderPence]
   );
+  const cartItemCount = useMemo(() => cart.reduce((sum, line) => sum + line.quantity, 0), [cart]);
+  const cartQuantities = useMemo(
+    () => new Map(cart.map((line) => [line.menuItemId, line.quantity])),
+    [cart]
+  );
+
+  useEffect(() => {
+    if (!lastAdded) return;
+    const timeout = window.setTimeout(() => setLastAdded(""), 2200);
+    return () => window.clearTimeout(timeout);
+  }, [lastAdded]);
+
+  useEffect(() => {
+    if (!cartPulse) return;
+    const timeout = window.setTimeout(() => setCartPulse(false), 650);
+    return () => window.clearTimeout(timeout);
+  }, [cartPulse]);
 
   function addItem(item: MenuItem) {
+    setLastAdded(item.name);
+    setCartPulse(true);
     setCart((current) => {
       const existing = current.find((line) => line.menuItemId === item.id && !line.optionIds.length && !line.addOnIds.length);
       if (existing) {
@@ -139,6 +161,10 @@ export function OrderFlow() {
         }
       ];
     });
+  }
+
+  function scrollToBasket() {
+    basketRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function changeQuantity(menuItemId: string, delta: number) {
@@ -232,7 +258,18 @@ export function OrderFlow() {
   }
 
   return (
-    <main className="mx-auto grid max-w-7xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:px-8">
+    <main className="mx-auto grid max-w-7xl gap-6 px-4 pb-28 pt-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:px-8 lg:pb-8">
+      {lastAdded ? (
+        <div className="fixed left-4 right-4 top-24 z-[65] mx-auto flex max-w-md items-center gap-3 rounded-full border border-mint/20 bg-white px-4 py-3 text-sm font-semibold text-date shadow-soft md:top-20" role="status" aria-live="polite">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mint text-white">
+            <CheckCircle2 size={18} />
+          </span>
+          <span className="min-w-0 flex-1 truncate">{lastAdded} added to basket</span>
+          <button type="button" onClick={scrollToBasket} className="rounded-full bg-cream px-3 py-2 text-xs text-date">
+            View
+          </button>
+        </div>
+      ) : null}
       <section>
         <div className="rounded-lg bg-date p-6 text-cream">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-saffron">Soft launch table ordering</p>
@@ -260,7 +297,7 @@ export function OrderFlow() {
                 <h2 className="font-display text-3xl font-semibold text-date">{category.name}</h2>
                 <div className="mt-4 grid gap-5">
                   {categoryItems.map((item) => (
-                    <MenuCard key={item.id} item={item} onAdd={addItem} />
+                    <MenuCard key={item.id} item={item} onAdd={addItem} quantity={cartQuantities.get(item.id) ?? 0} />
                   ))}
                 </div>
               </section>
@@ -270,7 +307,7 @@ export function OrderFlow() {
         )}
       </section>
 
-      <aside className="rounded-lg border border-date/10 bg-white shadow-soft lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:overscroll-contain">
+      <aside ref={basketRef} id="basket" className={`scroll-mt-24 rounded-lg border border-date/10 bg-white shadow-soft transition lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:overscroll-contain ${cartPulse ? "ring-4 ring-mint/20" : ""}`}>
         <div className="sticky top-0 z-10 border-b border-date/10 bg-white/95 p-5 backdrop-blur">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -454,6 +491,22 @@ export function OrderFlow() {
           </button>
         </div>
       </aside>
+      {cartItemCount > 0 ? (
+        <div className="fixed inset-x-3 bottom-3 z-[60] rounded-full border border-date/10 bg-date p-2 text-cream shadow-soft md:hidden">
+          <button type="button" onClick={scrollToBasket} className="focus-ring flex min-h-12 w-full items-center justify-between gap-3 rounded-full px-3 text-left">
+            <span className="flex items-center gap-3">
+              <span className={`flex h-10 w-10 items-center justify-center rounded-full bg-mint font-bold text-white transition ${cartPulse ? "scale-110" : ""}`}>
+                {cartItemCount}
+              </span>
+              <span>
+                <span className="block text-sm font-semibold">Your basket</span>
+                <span className="block text-xs text-cream/70">Tap to review and send</span>
+              </span>
+            </span>
+            <span className="shrink-0 rounded-full bg-cream px-4 py-2 text-sm font-semibold text-date">{money(totals.totalPence)}</span>
+          </button>
+        </div>
+      ) : null}
     </main>
   );
 }
