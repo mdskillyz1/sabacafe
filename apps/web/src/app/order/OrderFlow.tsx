@@ -264,7 +264,7 @@ export function OrderFlow() {
   }
 
   return (
-    <main className="mx-auto grid max-w-7xl gap-6 px-4 pb-28 pt-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:px-8 lg:pb-8">
+    <main className="mx-auto grid w-full max-w-7xl gap-6 overflow-x-hidden px-4 pb-28 pt-6 sm:px-6 sm:pt-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:px-8 lg:pb-8">
       {lastAdded ? (
         <div className="fixed left-4 right-4 top-24 z-[65] mx-auto flex max-w-md items-center gap-3 rounded-full border border-mint/20 bg-white px-4 py-3 text-sm font-semibold text-date shadow-soft md:top-20" role="status" aria-live="polite">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mint text-white">
@@ -277,9 +277,9 @@ export function OrderFlow() {
         </div>
       ) : null}
       <section>
-        <div className="rounded-lg bg-date p-6 text-cream">
+        <div className="rounded-lg bg-date p-5 text-cream sm:p-6">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-saffron">Soft launch table ordering</p>
-          <h1 className="mt-2 font-display text-4xl font-semibold">Order from your table, then pay at the counter.</h1>
+          <h1 className="mt-2 font-display text-3xl font-semibold leading-tight sm:text-4xl">Order from your table, then pay at the counter.</h1>
           <p className="mt-3 text-cream/75">
             Scan the QR code, add your food, send the order to the kitchen, and a staff member will prepare it shortly.
           </p>
@@ -316,13 +316,14 @@ export function OrderFlow() {
           </div>
         ) : (
           <div className="mt-8 space-y-10">
-            <nav aria-label="Order categories" className="sticky top-16 z-30 -mx-4 border-y border-date/10 bg-cream/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-lg sm:border sm:bg-white/95">
-              <div className="flex gap-2 overflow-x-auto pb-1">
+            <nav aria-label="Order categories" className="sticky top-[106px] z-40 -mx-4 border-y border-date/10 bg-cream/95 px-4 py-3 shadow-sm backdrop-blur sm:top-[73px] sm:mx-0 sm:rounded-lg sm:border sm:bg-white/95">
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-clay sm:hidden">Choose category</p>
+              <div className="flex snap-x gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
                 {visibleCategories.map((category) => (
                   <a
                     key={category.id}
                     href={`#order-${category.slug}`}
-                    className="focus-ring shrink-0 rounded-full border border-date/10 bg-white px-4 py-2 text-sm font-semibold text-date shadow-sm transition hover:border-mint hover:text-mint"
+                    className="focus-ring min-h-11 shrink-0 snap-start rounded-full border border-date/10 bg-white px-4 py-2.5 text-sm font-semibold text-date shadow-sm transition hover:border-mint hover:text-mint"
                   >
                     {category.name}
                   </a>
@@ -333,7 +334,7 @@ export function OrderFlow() {
             {visibleCategories.map((category) => {
               const categoryItems = items.filter((item) => item.categoryId === category.id);
               return (
-                <section key={category.id} id={`order-${category.slug}`} className="scroll-mt-32">
+                <section key={category.id} id={`order-${category.slug}`} className="scroll-mt-40 sm:scroll-mt-32">
                   <h2 className="font-display text-3xl font-semibold text-date">{category.name}</h2>
                   <div className="mt-4 grid gap-5">
                     {categoryItems.map((item) => (

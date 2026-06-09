@@ -14,12 +14,14 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
   background: #fffaf1;
   color: #1b1715;
+  overflow-x: hidden;
 }
 
 .somali-pattern {

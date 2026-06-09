@@ -25,10 +25,10 @@ export function MenuPageClient() {
   const visibleCategories = menu.categories.filter((category) => menu.items.some((item) => item.categoryId === category.id));
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <main className="mx-auto w-full max-w-7xl overflow-x-hidden px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
       <div className="max-w-3xl">
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-clay">Saba Cafe menu</p>
-        <h1 className="mt-2 font-display text-5xl font-semibold text-date">Fresh Somali favourites, ready for pickup, delivery, or a warm table in store.</h1>
+        <h1 className="mt-2 font-display text-4xl font-semibold leading-tight text-date sm:text-5xl">Fresh Somali favourites, ready for pickup, delivery, or a warm table in store.</h1>
         <p className="mt-4 leading-7 text-date/70">
           Our online menu is managed directly by Saba Cafe. When new dishes are published, you will see them here first for
           ordering, pickup, delivery, and dine-in visits at {businessInfo.formattedAddress}.
@@ -87,13 +87,14 @@ export function MenuPageClient() {
 
       {hasMenu ? (
         <div className="mt-10 space-y-12">
-          <nav aria-label="Menu categories" className="sticky top-16 z-30 -mx-4 border-y border-date/10 bg-cream/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-lg sm:border sm:bg-white/95">
-            <div className="flex gap-2 overflow-x-auto pb-1">
+          <nav aria-label="Menu categories" className="sticky top-[106px] z-40 -mx-4 border-y border-date/10 bg-cream/95 px-4 py-3 shadow-sm backdrop-blur sm:top-[73px] sm:mx-0 sm:rounded-lg sm:border sm:bg-white/95">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-clay sm:hidden">Choose category</p>
+            <div className="flex snap-x gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
               {visibleCategories.map((category) => (
                 <a
                   key={category.id}
                   href={`#${category.slug}`}
-                  className="focus-ring shrink-0 rounded-full border border-date/10 bg-white px-4 py-2 text-sm font-semibold text-date shadow-sm transition hover:border-mint hover:text-mint"
+                  className="focus-ring min-h-11 shrink-0 snap-start rounded-full border border-date/10 bg-white px-4 py-2.5 text-sm font-semibold text-date shadow-sm transition hover:border-mint hover:text-mint"
                 >
                   {category.name}
                 </a>
@@ -104,7 +105,7 @@ export function MenuPageClient() {
           {visibleCategories.map((category) => {
             const items = menu.items.filter((item) => item.categoryId === category.id);
             return (
-              <section key={category.id} id={category.slug} className="scroll-mt-32">
+              <section key={category.id} id={category.slug} className="scroll-mt-40 sm:scroll-mt-32">
                 <h2 className="font-display text-3xl font-semibold text-date">{category.name}</h2>
                 <p className="mt-2 text-date/65">{category.description}</p>
                 <div className="mt-5 grid gap-5 lg:grid-cols-2">

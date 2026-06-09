@@ -17,16 +17,16 @@ export function MenuCard({
   quantity?: number;
 }) {
   return (
-    <article className={`grid overflow-hidden rounded-lg border border-date/10 bg-white shadow-sm ${compact ? "" : "sm:grid-cols-[180px_1fr]"}`}>
-      <FoodImage label={item.name} src={item.image} className={compact ? "min-h-48" : "min-h-48 sm:min-h-full"} />
-      <div className={`flex flex-col p-5 ${compact ? "min-h-0" : "min-h-64"}`}>
+    <article className={`grid min-w-0 overflow-hidden rounded-lg border border-date/10 bg-white shadow-sm ${compact ? "" : "sm:grid-cols-[160px_1fr] lg:grid-cols-[180px_1fr]"}`}>
+      <FoodImage label={item.name} src={item.image} className={compact ? "min-h-36 sm:min-h-48" : "min-h-36 sm:min-h-full"} />
+      <div className={`flex min-w-0 flex-col p-4 sm:p-5 ${compact ? "min-h-0" : "min-h-0 sm:min-h-64"}`}>
         <div className="flex flex-wrap gap-2">
           {item.popular ? <Badge>Popular</Badge> : null}
           {item.recommended ? <Badge tone="dark">Chef pick</Badge> : null}
         </div>
-        <div className="mt-4 flex items-start justify-between gap-4">
-          <div>
-            <h3 className="font-display text-2xl font-semibold text-date">{item.name}</h3>
+        <div className="mt-4 flex min-w-0 items-start justify-between gap-3 sm:gap-4">
+          <div className="min-w-0">
+            <h3 className="break-words font-display text-xl font-semibold leading-tight text-date sm:text-2xl">{item.name}</h3>
             <p className="mt-2 text-sm leading-6 text-date/70">{item.description}</p>
           </div>
           <p className="shrink-0 font-semibold text-clay">{money(item.pricePence)}</p>
