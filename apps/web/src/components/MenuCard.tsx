@@ -17,7 +17,7 @@ export function MenuCard({
   quantity?: number;
 }) {
   return (
-    <article className={`grid min-w-0 overflow-hidden rounded-lg border border-date/10 bg-white shadow-sm ${compact ? "" : "sm:grid-cols-[160px_1fr] lg:grid-cols-[180px_1fr]"}`}>
+    <article className={`grid w-full min-w-0 max-w-full overflow-hidden rounded-lg border border-date/10 bg-white shadow-sm ${compact ? "" : "sm:grid-cols-[160px_1fr] lg:grid-cols-[180px_1fr]"}`}>
       <FoodImage label={item.name} src={item.image} className={compact ? "min-h-36 sm:min-h-48" : "min-h-36 sm:min-h-full"} />
       <div className={`flex min-w-0 flex-col p-4 sm:p-5 ${compact ? "min-h-0" : "min-h-0 sm:min-h-64"}`}>
         <div className="flex flex-wrap gap-2">
@@ -41,7 +41,7 @@ export function MenuCard({
             type="button"
             disabled={!item.available}
             onClick={() => onAdd(item)}
-            className={`focus-ring mt-auto rounded-full px-4 py-3 text-sm font-semibold text-cream transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-date/30 ${
+            className={`focus-ring mt-auto w-full rounded-full px-4 py-3 text-center text-sm font-semibold text-cream transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-date/30 ${
               quantity > 0 ? "bg-mint" : "bg-date"
             }`}
           >
@@ -50,7 +50,7 @@ export function MenuCard({
         ) : (
           <Link
             href="/order"
-            className={`focus-ring mt-auto rounded-full px-4 py-3 text-center text-sm font-semibold ${
+            className={`focus-ring mt-auto w-full rounded-full px-4 py-3 text-center text-sm font-semibold ${
               item.available ? "bg-date text-cream" : "pointer-events-none bg-date/30 text-cream"
             }`}
           >

@@ -87,14 +87,14 @@ export function MenuPageClient() {
 
       {hasMenu ? (
         <div className="mt-10 space-y-12">
-          <nav aria-label="Menu categories" className="sticky top-[106px] z-40 -mx-4 border-y border-date/10 bg-cream/95 px-4 py-3 shadow-sm backdrop-blur sm:top-[73px] sm:mx-0 sm:rounded-lg sm:border sm:bg-white/95">
+          <nav aria-label="Menu categories" className="sticky top-[106px] z-40 rounded-lg border border-date/10 bg-cream/95 p-3 shadow-sm backdrop-blur sm:top-[73px] sm:bg-white/95">
             <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-clay sm:hidden">Choose category</p>
-            <div className="flex snap-x gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
+            <div className="flex flex-wrap gap-2">
               {visibleCategories.map((category) => (
                 <a
                   key={category.id}
                   href={`#${category.slug}`}
-                  className="focus-ring min-h-11 shrink-0 snap-start rounded-full border border-date/10 bg-white px-4 py-2.5 text-sm font-semibold text-date shadow-sm transition hover:border-mint hover:text-mint"
+                  className="focus-ring inline-flex min-h-10 flex-1 items-center justify-center rounded-full border border-date/10 bg-white px-3 py-2 text-center text-xs font-semibold leading-tight text-date shadow-sm transition hover:border-mint hover:text-mint sm:flex-none sm:px-4 sm:py-2.5 sm:text-sm"
                 >
                   {category.name}
                 </a>
