@@ -22,6 +22,7 @@ export function MenuPageClient() {
   }, []);
 
   const hasMenu = menu.published && menu.items.length > 0;
+  const visibleCategories = menu.categories.filter((category) => menu.items.some((item) => item.categoryId === category.id));
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -86,11 +87,24 @@ export function MenuPageClient() {
 
       {hasMenu ? (
         <div className="mt-10 space-y-12">
-          {menu.categories.map((category) => {
+          <nav aria-label="Menu categories" className="sticky top-16 z-30 -mx-4 border-y border-date/10 bg-cream/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-lg sm:border sm:bg-white/95">
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {visibleCategories.map((category) => (
+                <a
+                  key={category.id}
+                  href={`#${category.slug}`}
+                  className="focus-ring shrink-0 rounded-full border border-date/10 bg-white px-4 py-2 text-sm font-semibold text-date shadow-sm transition hover:border-mint hover:text-mint"
+                >
+                  {category.name}
+                </a>
+              ))}
+            </div>
+          </nav>
+
+          {visibleCategories.map((category) => {
             const items = menu.items.filter((item) => item.categoryId === category.id);
-            if (!items.length) return null;
             return (
-              <section key={category.id} id={category.slug}>
+              <section key={category.id} id={category.slug} className="scroll-mt-32">
                 <h2 className="font-display text-3xl font-semibold text-date">{category.name}</h2>
                 <p className="mt-2 text-date/65">{category.description}</p>
                 <div className="mt-5 grid gap-5 lg:grid-cols-2">

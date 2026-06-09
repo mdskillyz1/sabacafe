@@ -129,6 +129,10 @@ export function OrderFlow() {
     () => new Map(cart.map((line) => [line.menuItemId, line.quantity])),
     [cart]
   );
+  const visibleCategories = useMemo(
+    () => menuCategories.filter((category) => items.some((item) => item.categoryId === category.id)),
+    [items]
+  );
 
   useEffect(() => {
     if (!lastAdded) return;
@@ -312,20 +316,33 @@ export function OrderFlow() {
           </div>
         ) : (
           <div className="mt-8 space-y-10">
-            {menuCategories.map((category) => {
-            const categoryItems = items.filter((item) => item.categoryId === category.id);
-            if (!categoryItems.length) return null;
-            return (
-              <section key={category.id}>
-                <h2 className="font-display text-3xl font-semibold text-date">{category.name}</h2>
-                <div className="mt-4 grid gap-5">
-                  {categoryItems.map((item) => (
-                    <MenuCard key={item.id} item={item} onAdd={addItem} quantity={cartQuantities.get(item.id) ?? 0} />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
+            <nav aria-label="Order categories" className="sticky top-16 z-30 -mx-4 border-y border-date/10 bg-cream/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-lg sm:border sm:bg-white/95">
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {visibleCategories.map((category) => (
+                  <a
+                    key={category.id}
+                    href={`#order-${category.slug}`}
+                    className="focus-ring shrink-0 rounded-full border border-date/10 bg-white px-4 py-2 text-sm font-semibold text-date shadow-sm transition hover:border-mint hover:text-mint"
+                  >
+                    {category.name}
+                  </a>
+                ))}
+              </div>
+            </nav>
+
+            {visibleCategories.map((category) => {
+              const categoryItems = items.filter((item) => item.categoryId === category.id);
+              return (
+                <section key={category.id} id={`order-${category.slug}`} className="scroll-mt-32">
+                  <h2 className="font-display text-3xl font-semibold text-date">{category.name}</h2>
+                  <div className="mt-4 grid gap-5">
+                    {categoryItems.map((item) => (
+                      <MenuCard key={item.id} item={item} onAdd={addItem} quantity={cartQuantities.get(item.id) ?? 0} />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
           </div>
         )}
       </section>
