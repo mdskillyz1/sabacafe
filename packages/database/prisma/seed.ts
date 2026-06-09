@@ -82,6 +82,20 @@ async function main() {
     });
   }
 
+  const currentMenuItemIds = menuItems.map((item) => item.id);
+  await db.menuItem.updateMany({
+    where: {
+      id: {
+        notIn: currentMenuItemIds
+      }
+    },
+    data: {
+      published: false,
+      hidden: true,
+      available: false
+    }
+  });
+
   for (const [index, item] of menuItems.entries()) {
     await db.menuItem.upsert({
       where: { id: item.id },

@@ -31,11 +31,11 @@ export function MenuCard({
           </div>
           <p className="shrink-0 font-semibold text-clay">{money(item.pricePence)}</p>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2 text-xs text-date/55">
-          {item.spiceLevel ? <span>Spice {item.spiceLevel}/3</span> : null}
-          <span>{item.prepMinutes} min</span>
-          <span>{item.allergens.length ? `Allergens: ${item.allergens.join(", ")}` : "No listed allergens"}</span>
-        </div>
+        {item.spiceLevel ? (
+          <div className="mt-4 flex flex-wrap gap-2 text-xs text-date/55">
+            <span>Spice {item.spiceLevel}/3</span>
+          </div>
+        ) : null}
         {onAdd ? (
           <button
             type="button"
