@@ -5,17 +5,37 @@ const prisma = new PrismaClient();
 const db = prisma as any;
 
 async function main() {
-  await db.adminUser.upsert({
+  await db.adminUser.updateMany({
     where: { username: "admin" },
+    data: { isActive: false }
+  });
+
+  await db.adminUser.upsert({
+    where: { username: "saba-owner" },
     update: {
       role: "SUPER_ADMIN",
       isActive: true
     },
     create: {
-      username: "admin",
+      username: "saba-owner",
       passwordHash:
-        "scrypt$pvw3HbhBXpkUHB9AQtnKLQ$KFOK0P0Em_8hPHhkCn9LDzIGhKsDoglCV7fgiD6LQ8T_dxnCt3JDKGQ93sXjdjfUl8anu40z9mmA13JOKM74NQ",
+        "scrypt$h_7wqcOs3vly7LfobF6psg$86_1YbpBzttoJMono4fnj2NBEeX4KuysgRDA7azJdKc2aK7pOZcMD4MPtnOMOm-eLIgCbAtO-A1CKofnsDu3ZQ",
       role: "SUPER_ADMIN",
+      isActive: true
+    }
+  });
+
+  await db.adminUser.upsert({
+    where: { username: "saba-shop" },
+    update: {
+      role: "STAFF",
+      isActive: true
+    },
+    create: {
+      username: "saba-shop",
+      passwordHash:
+        "scrypt$xh27_SETu0WrxCwjBHZBtA$NGE6QEaHMG5H3GjMlhv9DLHYMEq_B8sa0gabcSXMIEefsiV58fSR0EfR1UI8LyagHq8xF3YYkIs5oG0W-Oli4w",
+      role: "STAFF",
       isActive: true
     }
   });

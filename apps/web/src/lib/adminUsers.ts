@@ -2,6 +2,7 @@ import { constants as fsConstants, promises as fs } from "node:fs";
 import path from "node:path";
 import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
+import { prisma } from "@saba/database";
 import bundledAdminUsers from "../../data/admin-users.json";
 
 const scrypt = promisify(scryptCallback);
@@ -26,28 +27,43 @@ type AdminUserStore = {
 export type PublicAdminUser = Omit<AdminUserRecord, "passwordHash">;
 
 const adminUsersFileName = "admin-users.json";
+const db = prisma as any;
 const candidateStorePaths = [
   path.join(process.cwd(), "data", adminUsersFileName),
   path.join(process.cwd(), "apps", "web", "data", adminUsersFileName),
   path.join("/tmp", "saba-cafe", adminUsersFileName)
 ];
 
-const defaultAdminHash =
-  "scrypt$pvw3HbhBXpkUHB9AQtnKLQ$KFOK0P0Em_8hPHhkCn9LDzIGhKsDoglCV7fgiD6LQ8T_dxnCt3JDKGQ93sXjdjfUl8anu40z9mmA13JOKM74NQ";
-
 const now = () => new Date().toISOString();
 
-function defaultAdminUser(): AdminUserRecord {
-  const createdAt = "2026-05-07T00:00:00.000Z";
-  return {
-    id: "admin-dev",
-    username: "admin",
-    passwordHash: defaultAdminHash,
-    role: "SUPER_ADMIN",
-    isActive: true,
-    createdAt,
-    updatedAt: createdAt
-  };
+function databaseAdminUsersEnabled() {
+  return Boolean(process.env.DATABASE_URL);
+}
+
+function defaultAdminUsers(): AdminUserRecord[] {
+  const createdAt = "2026-06-09T00:00:00.000Z";
+  return [
+    {
+      id: "admin-owner",
+      username: "saba-owner",
+      passwordHash:
+        "scrypt$h_7wqcOs3vly7LfobF6psg$86_1YbpBzttoJMono4fnj2NBEeX4KuysgRDA7azJdKc2aK7pOZcMD4MPtnOMOm-eLIgCbAtO-A1CKofnsDu3ZQ",
+      role: "SUPER_ADMIN",
+      isActive: true,
+      createdAt,
+      updatedAt: createdAt
+    },
+    {
+      id: "admin-shop",
+      username: "saba-shop",
+      passwordHash:
+        "scrypt$xh27_SETu0WrxCwjBHZBtA$NGE6QEaHMG5H3GjMlhv9DLHYMEq_B8sa0gabcSXMIEefsiV58fSR0EfR1UI8LyagHq8xF3YYkIs5oG0W-Oli4w",
+      role: "STAFF",
+      isActive: true,
+      createdAt,
+      updatedAt: createdAt
+    }
+  ];
 }
 
 function normalizeUsername(username: string) {
@@ -57,6 +73,56 @@ function normalizeUsername(username: string) {
 function publicUser(user: AdminUserRecord): PublicAdminUser {
   const { passwordHash: _passwordHash, ...safeUser } = user;
   return safeUser;
+}
+
+function dbUserToRecord(user: any): AdminUserRecord {
+  return {
+    id: user.id,
+    username: normalizeUsername(user.username),
+    passwordHash: user.passwordHash,
+    role: user.role === "SUPER_ADMIN" ? "SUPER_ADMIN" : "STAFF",
+    isActive: user.isActive !== false,
+    createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt ?? now(),
+    updatedAt: user.updatedAt instanceof Date ? user.updatedAt.toISOString() : user.updatedAt ?? now()
+  };
+}
+
+async function ensureDefaultDbAdminUsers() {
+  const defaults = defaultAdminUsers();
+  await db.adminUser.updateMany({
+    where: { username: "admin" },
+    data: { isActive: false }
+  });
+
+  for (const user of defaults) {
+    await db.adminUser.upsert({
+      where: { username: user.username },
+      update: {
+        passwordHash: user.passwordHash,
+        role: user.role,
+        isActive: true
+      },
+      create: {
+        username: user.username,
+        passwordHash: user.passwordHash,
+        role: user.role,
+        isActive: true
+      }
+    });
+  }
+}
+
+async function readDbAdminUsers(): Promise<AdminUserRecord[]> {
+  await ensureDefaultDbAdminUsers();
+  const users = await db.adminUser.findMany({
+    where: {
+      username: {
+        not: "admin"
+      }
+    },
+    orderBy: [{ role: "asc" }, { username: "asc" }]
+  });
+  return users.map(dbUserToRecord);
 }
 
 async function readFirstAvailableStore() {
@@ -95,10 +161,13 @@ function normalizeStore(input: Partial<AdminUserStore>): AdminUserStore {
       isActive: user.isActive !== false,
       createdAt: user.createdAt ?? now(),
       updatedAt: user.updatedAt ?? now()
-    }));
+    }))
+    .filter((user) => user.username !== "admin");
 
-  if (!normalizedUsers.some((user) => user.username === "admin")) {
-    normalizedUsers.unshift(defaultAdminUser());
+  for (const user of defaultAdminUsers().reverse()) {
+    if (!normalizedUsers.some((candidate) => candidate.username === user.username)) {
+      normalizedUsers.unshift(user);
+    }
   }
 
   return {
@@ -108,6 +177,14 @@ function normalizeStore(input: Partial<AdminUserStore>): AdminUserStore {
 }
 
 export async function readAdminUserStore(): Promise<AdminUserStore> {
+  if (databaseAdminUsersEnabled()) {
+    try {
+      return { users: await readDbAdminUsers(), updatedAt: now() };
+    } catch (error) {
+      console.error("Database admin users unavailable, falling back to bundled users.", error);
+    }
+  }
+
   try {
     const raw = await readFirstAvailableStore();
     return normalizeStore(JSON.parse(raw) as Partial<AdminUserStore>);
@@ -139,6 +216,19 @@ export async function verifyPassword(password: string, passwordHash: string) {
 }
 
 export async function authenticateAdmin(username: string, password: string) {
+  if (databaseAdminUsersEnabled()) {
+    try {
+      await ensureDefaultDbAdminUsers();
+      const user = await db.adminUser.findUnique({ where: { username: normalizeUsername(username) } });
+      const record = user ? dbUserToRecord(user) : null;
+      if (!record || !record.isActive) return null;
+      const valid = await verifyPassword(password, record.passwordHash);
+      return valid ? record : null;
+    } catch (error) {
+      console.error("Database admin authentication unavailable, falling back to bundled users.", error);
+    }
+  }
+
   const store = await readAdminUserStore();
   const user = store.users.find((candidate) => candidate.username === normalizeUsername(username));
   if (!user || !user.isActive) return null;
@@ -160,14 +250,14 @@ export async function findAdminUserById(id: string) {
 export function validateAdminUserInput(input: { username?: string; password?: string; role?: string }) {
   const errors: Record<string, string> = {};
   const username = normalizeUsername(input.username ?? "");
-  if (!/^[a-z0-9._-]{3,32}$/.test(username)) {
+  if (input.username !== undefined && !/^[a-z0-9._-]{3,32}$/.test(username)) {
     errors.username = "Username must be 3-32 characters using letters, numbers, dots, dashes, or underscores.";
   }
   if (input.password !== undefined && input.password.length < 8) {
     errors.password = "Password must be at least 8 characters.";
   }
   if (input.role && input.role !== "SUPER_ADMIN" && input.role !== "STAFF") {
-    errors.role = "Choose Super Admin or Staff.";
+    errors.role = "Choose Owner or Shop.";
   }
   return errors;
 }
@@ -180,6 +270,23 @@ export async function createAdminUser(input: { username: string; password: strin
   const username = normalizeUsername(input.username);
   if (store.users.some((user) => user.username === username)) {
     return { ok: false as const, errors: { username: "That username already exists." } };
+  }
+
+  if (databaseAdminUsersEnabled()) {
+    try {
+      await db.adminUser.create({
+        data: {
+          username,
+          passwordHash: await hashPassword(input.password),
+          role: input.role,
+          isActive: true
+        }
+      });
+      return { ok: true as const, users: await listAdminUsers() };
+    } catch (error) {
+      console.error("Database admin create failed.", error);
+      return { ok: false as const, errors: { user: "Could not create admin user. Check the database connection." } };
+    }
   }
 
   const timestamp = now();
@@ -214,6 +321,24 @@ export async function updateAdminUser(
     return { ok: false as const, errors: { username: "That username already exists." } };
   }
 
+  if (databaseAdminUsersEnabled()) {
+    try {
+      await db.adminUser.update({
+        where: { id },
+        data: {
+          username,
+          role: input.role ?? current.role,
+          isActive: input.isActive ?? current.isActive,
+          ...(input.password ? { passwordHash: await hashPassword(input.password) } : {})
+        }
+      });
+      return { ok: true as const, users: await listAdminUsers() };
+    } catch (error) {
+      console.error("Database admin update failed.", error);
+      return { ok: false as const, errors: { user: "Could not update admin user. Check the database connection." } };
+    }
+  }
+
   nextUsers[index] = {
     ...current,
     username,
@@ -232,8 +357,19 @@ export async function deleteAdminUser(id: string) {
   const user = store.users.find((candidate) => candidate.id === id);
   if (!user) return { ok: false as const, errors: { user: "Admin user not found." } };
   if (user.role === "SUPER_ADMIN" && store.users.filter((candidate) => candidate.role === "SUPER_ADMIN").length <= 1) {
-    return { ok: false as const, errors: { user: "At least one Super Admin must remain." } };
+    return { ok: false as const, errors: { user: "At least one Owner account must remain." } };
   }
+
+  if (databaseAdminUsersEnabled()) {
+    try {
+      await db.adminUser.delete({ where: { id } });
+      return { ok: true as const, users: await listAdminUsers() };
+    } catch (error) {
+      console.error("Database admin delete failed.", error);
+      return { ok: false as const, errors: { user: "Could not delete admin user. Check the database connection." } };
+    }
+  }
+
   const nextStore = await writeAdminUserStore({ ...store, users: store.users.filter((candidate) => candidate.id !== id) });
   return { ok: true as const, users: nextStore.users.map(publicUser) };
 }

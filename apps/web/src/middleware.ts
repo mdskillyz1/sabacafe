@@ -12,10 +12,34 @@ function base64UrlToBytes(value: string) {
   return Uint8Array.from(atob(padded), (char) => char.charCodeAt(0));
 }
 
-async function verifySessionCookie(cookie?: string) {
-  if (!cookie) return false;
+type AdminSession = {
+  exp?: number;
+  role?: "SUPER_ADMIN" | "STAFF";
+};
+
+const ownerOnlyPaths = [
+  "/admin/users",
+  "/admin/menu",
+  "/admin/settings",
+  "/admin/website-settings",
+  "/admin/opening-hours",
+  "/admin/promo-codes",
+  "/admin/customers",
+  "/api/admin/users",
+  "/api/admin/menu",
+  "/api/admin/settings",
+  "/api/admin/business-info",
+  "/api/admin/legal-content"
+];
+
+function isOwnerOnlyPath(pathname: string) {
+  return ownerOnlyPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
+
+async function verifySessionCookie(cookie?: string): Promise<AdminSession | null> {
+  if (!cookie) return null;
   const [payload, signature] = cookie.split(".");
-  if (!payload || !signature) return false;
+  if (!payload || !signature) return null;
 
   const key = await crypto.subtle.importKey(
     "raw",
@@ -26,13 +50,14 @@ async function verifySessionCookie(cookie?: string) {
   );
 
   const valid = await crypto.subtle.verify("HMAC", key, base64UrlToBytes(signature), new TextEncoder().encode(payload));
-  if (!valid) return false;
+  if (!valid) return null;
 
   try {
-    const session = JSON.parse(new TextDecoder().decode(base64UrlToBytes(payload))) as { exp?: number };
-    return Boolean(session.exp && session.exp > Date.now());
+    const session = JSON.parse(new TextDecoder().decode(base64UrlToBytes(payload))) as AdminSession;
+    if (!session.exp || session.exp <= Date.now()) return null;
+    return session;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -47,7 +72,18 @@ export async function middleware(request: NextRequest) {
   }
 
   const cookie = request.cookies.get(adminCookieName)?.value;
-  if (await verifySessionCookie(cookie)) {
+  const session = await verifySessionCookie(cookie);
+  if (session) {
+    if (session.role !== "SUPER_ADMIN" && isOwnerOnlyPath(pathname)) {
+      if (isAdminApi) {
+        return NextResponse.json({ error: "Owner access required." }, { status: 403 });
+      }
+
+      const overviewUrl = request.nextUrl.clone();
+      overviewUrl.pathname = "/admin";
+      overviewUrl.searchParams.set("access", "restricted");
+      return NextResponse.redirect(overviewUrl);
+    }
     return NextResponse.next();
   }
 

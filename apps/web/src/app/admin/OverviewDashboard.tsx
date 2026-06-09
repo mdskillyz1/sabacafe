@@ -21,6 +21,11 @@ import { money } from "@saba/shared";
 import { AdminLogoutButton } from "./AdminLogoutButton";
 
 type Analytics = any;
+type CurrentAdmin = {
+  username: string;
+  role: "SUPER_ADMIN" | "STAFF";
+  label: string;
+};
 
 const rangeOptions = [
   ["today", "Today"],
@@ -43,14 +48,14 @@ const kpiLinks = [
   "/admin/orders?status=COMPLETED"
 ];
 const adminLinks = [
-  ["Menu", "/admin/menu"],
-  ["Orders", "/admin/orders"],
-  ["Kitchen", "/admin/kitchen"],
-  ["Bookings", "/admin/bookings"],
-  ["Reviews", "/admin/reviews"],
-  ["Delivery", "/admin/settings"],
-  ["Website", "/admin/website-settings"],
-  ["Admin users", "/admin/users"]
+  { label: "Menu", href: "/admin/menu", ownerOnly: true },
+  { label: "Orders", href: "/admin/orders", ownerOnly: false },
+  { label: "Kitchen", href: "/admin/kitchen", ownerOnly: false },
+  { label: "Bookings", href: "/admin/bookings", ownerOnly: false },
+  { label: "Reviews", href: "/admin/reviews", ownerOnly: false },
+  { label: "Delivery", href: "/admin/settings", ownerOnly: true },
+  { label: "Website", href: "/admin/website-settings", ownerOnly: true },
+  { label: "Admin users", href: "/admin/users", ownerOnly: true }
 ];
 
 function EmptyState({ message }: { message: string }) {
@@ -149,6 +154,7 @@ export function OverviewDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [currentAdmin, setCurrentAdmin] = useState<CurrentAdmin | null>(null);
 
   const query = useMemo(() => {
     const params = new URLSearchParams({ range });
@@ -178,6 +184,15 @@ export function OverviewDashboard() {
     load();
   }, [query]);
 
+  useEffect(() => {
+    fetch("/api/admin/me", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((body) => setCurrentAdmin(body.user ?? null))
+      .catch(() => setCurrentAdmin(null));
+  }, []);
+
+  const visibleAdminLinks = adminLinks.filter((link) => currentAdmin?.role === "SUPER_ADMIN" || !link.ownerOnly);
+
   const kpis = analytics
     ? [
         ["Sales", analytics.kpis.totalSales.display, analytics.kpis.totalSales.comparison, "bg-mint/10 text-mint"],
@@ -199,6 +214,7 @@ export function OverviewDashboard() {
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-saffron">Executive overview</p>
             <h1 className="mt-2 font-display text-5xl font-semibold">Saba Cafe business dashboard.</h1>
             <p className="mt-3 max-w-3xl text-cream/70">Real orders, bookings, website events, and admin activity. No mock analytics are shown.</p>
+            {currentAdmin ? <p className="mt-3 text-sm font-semibold text-cream/60">Signed in as {currentAdmin.label}: {currentAdmin.username}</p> : null}
           </div>
           <div className="flex gap-3">
             <button onClick={load} disabled={refreshing} className="focus-ring inline-flex items-center gap-2 rounded-full border border-cream/20 px-4 py-2 text-sm font-semibold text-cream disabled:opacity-70">
@@ -211,7 +227,7 @@ export function OverviewDashboard() {
 
       <div className="mt-6 flex flex-wrap items-center gap-3 rounded-lg border border-date/10 bg-white p-4 shadow-sm">
         <div className="mr-auto flex flex-wrap gap-2">
-          {adminLinks.map(([label, href]) => (
+          {visibleAdminLinks.map(({ label, href }) => (
             <Link key={href} href={href} className="focus-ring rounded-full bg-cream px-3 py-2 text-sm font-semibold text-date/70 hover:text-date">
               {label}
             </Link>
@@ -374,7 +390,7 @@ export function OverviewDashboard() {
           </section>
 
           <section className="mt-6 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
-            <Panel title="Staff operations">
+            <Panel title="Shop operations">
               <DonutList data={analytics.staffActivity.byType} empty="No staff activity yet" />
             </Panel>
             <Panel title="Recent activity feed">

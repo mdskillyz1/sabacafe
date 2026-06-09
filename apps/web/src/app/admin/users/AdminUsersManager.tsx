@@ -26,7 +26,7 @@ export function AdminUsersManager() {
     const response = await fetch("/api/admin/users", { cache: "no-store" });
     const body = await response.json();
     if (!response.ok) {
-      setError(body.error ?? "Only Super Admins can manage users.");
+      setError(body.error ?? "Only Owner accounts can manage users.");
       setLoading(false);
       return;
     }
@@ -107,7 +107,7 @@ export function AdminUsersManager() {
           </span>
           <div>
             <h2 className="font-display text-3xl font-semibold text-date">Create admin</h2>
-            <p className="mt-2 text-sm leading-6 text-date/65">Use strong passwords and only give Super Admin to trusted owners.</p>
+            <p className="mt-2 text-sm leading-6 text-date/65">Use strong passwords and only give Owner access to trusted business owners.</p>
           </div>
         </div>
 
@@ -143,8 +143,8 @@ export function AdminUsersManager() {
               onChange={(event) => setDraft((current) => ({ ...current, role: event.target.value as AdminRole }))}
               className="focus-ring mt-1 w-full rounded-md border border-date/15 px-4 py-3 font-normal"
             >
-              <option value="STAFF">Staff</option>
-              <option value="SUPER_ADMIN">Super Admin</option>
+              <option value="STAFF">Shop</option>
+              <option value="SUPER_ADMIN">Owner</option>
             </select>
           </label>
         </div>
@@ -160,7 +160,7 @@ export function AdminUsersManager() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="font-display text-2xl font-semibold text-date">{user.username}</p>
-                <p className="mt-1 text-sm text-date/55">{user.role === "SUPER_ADMIN" ? "Super Admin" : "Staff"} • {user.isActive ? "Active" : "Disabled"}</p>
+                <p className="mt-1 text-sm text-date/55">{user.role === "SUPER_ADMIN" ? "Owner" : "Shop"} • {user.isActive ? "Active" : "Disabled"}</p>
               </div>
               <button
                 onClick={() => updateUser(user, { isActive: !user.isActive })}
@@ -181,8 +181,8 @@ export function AdminUsersManager() {
                 onChange={(event) => updateUser(user, { role: event.target.value as AdminRole })}
                 className="focus-ring rounded-md border border-date/15 px-4 py-3"
               >
-                <option value="STAFF">Staff</option>
-                <option value="SUPER_ADMIN">Super Admin</option>
+                <option value="STAFF">Shop</option>
+                <option value="SUPER_ADMIN">Owner</option>
               </select>
               <input
                 type="password"

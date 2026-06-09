@@ -94,16 +94,19 @@ Admin menu images are uploaded through `/api/admin/menu/upload`, validated as JP
 
 Admin login:
 
-Development admin account:
+Launch admin accounts:
 
 ```txt
-Username: admin
-Password: admin123
+Owner username: saba-owner
+Owner temporary password: SabaOwner#9482!
+
+Shop username: saba-shop
+Shop temporary password: SabaShop#2716!
 ```
 
-Change this before production by logging into `/admin/users`, creating a new Super Admin, then disabling or deleting the development account.
+Change these temporary passwords after launch from `/admin/users`. Owner accounts can access every admin section. Shop accounts are for day-to-day operations and are limited to orders, kitchen, bookings, reviews, and the operational overview.
 
-Admin authentication uses usernames, secure password hashes, signed HTTP-only session cookies, and basic login rate limiting. Super Admins can manage admin users from `/admin/users`.
+Admin authentication uses usernames, secure password hashes, signed HTTP-only session cookies, role-based access, and basic login rate limiting. Owner accounts can manage admin users from `/admin/users`.
 
 Admin session variable:
 
@@ -128,7 +131,7 @@ Saba Cafe supports three order types from the same menu and admin system:
 - Takeaway collection
 - Delivery
 
-Staff can manage booking/restaurant tables from `/admin/bookings`. Each active table has a QR download link that points customers to the ordering page with the table number pre-filled. Orders appear in `/admin/orders` and `/admin/kitchen` with the order type and table number clearly shown.
+Shop staff can manage booking/restaurant tables from `/admin/bookings`. Each active table has a QR download link that points customers to the ordering page with the table number pre-filled. Orders appear in `/admin/orders` and `/admin/kitchen` with the order type and table number clearly shown.
 
 ## Google Reviews Setup
 

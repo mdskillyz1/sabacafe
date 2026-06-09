@@ -1,4 +1,23 @@
 {
-  "users": [],
-  "updatedAt": "2026-05-07T00:00:00.000Z"
+  "users": [
+    {
+      "id": "admin-owner",
+      "username": "saba-owner",
+      "passwordHash": "scrypt$h_7wqcOs3vly7LfobF6psg$86_1YbpBzttoJMono4fnj2NBEeX4KuysgRDA7azJdKc2aK7pOZcMD4MPtnOMOm-eLIgCbAtO-A1CKofnsDu3ZQ",
+      "role": "SUPER_ADMIN",
+      "isActive": true,
+      "createdAt": "2026-06-09T00:00:00.000Z",
+      "updatedAt": "2026-06-09T00:00:00.000Z"
+    },
+    {
+      "id": "admin-shop",
+      "username": "saba-shop",
+      "passwordHash": "scrypt$xh27_SETu0WrxCwjBHZBtA$NGE6QEaHMG5H3GjMlhv9DLHYMEq_B8sa0gabcSXMIEefsiV58fSR0EfR1UI8LyagHq8xF3YYkIs5oG0W-Oli4w",
+      "role": "STAFF",
+      "isActive": true,
+      "createdAt": "2026-06-09T00:00:00.000Z",
+      "updatedAt": "2026-06-09T00:00:00.000Z"
+    }
+  ],
+  "updatedAt": "2026-06-09T00:00:00.000Z"
 }
