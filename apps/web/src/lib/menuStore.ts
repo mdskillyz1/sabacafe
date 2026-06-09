@@ -318,23 +318,52 @@ async function createImportedMenuItem(item: MenuItem & { sortOrder?: number }, i
 async function syncImportedMenuItems() {
   if (!menuItems.length) return;
 
-  await db.menuItem.deleteMany({
+  await db.menuItem.updateMany({
     where: {
       id: {
-        in: legacyGroupedMenuItemIds
+        notIn: menuItems.map((item) => item.id)
       }
+    },
+    data: {
+      available: false,
+      published: false,
+      hidden: true
     }
   });
 
   const existingItems = await db.menuItem.findMany({
     select: {
-      id: true
+      id: true,
+      image: true
     }
   });
-  const existingIds = new Set(existingItems.map((item: { id: string }) => item.id));
+  const existingImages = new Map(existingItems.map((item: { id: string; image?: string | null }) => [item.id, item.image ?? ""]));
 
   for (const [index, item] of menuItems.entries()) {
-    if (!existingIds.has(item.id)) {
+    const preservedImage = existingImages.get(item.id) || item.image;
+    if (existingImages.has(item.id)) {
+      await db.menuItem.update({
+        where: { id: item.id },
+        data: {
+          categoryId: item.categoryId,
+          name: item.name,
+          slug: item.slug,
+          description: item.description,
+          pricePence: item.pricePence,
+          image: preservedImage,
+          allergens: item.allergens,
+          spiceLevel: item.spiceLevel,
+          halal: true,
+          available: item.available,
+          published: true,
+          hidden: false,
+          popular: item.popular,
+          recommended: item.recommended,
+          prepMinutes: item.prepMinutes,
+          sortOrder: item.sortOrder ?? index
+        }
+      });
+    } else {
       await createImportedMenuItem(item, index);
     }
   }
