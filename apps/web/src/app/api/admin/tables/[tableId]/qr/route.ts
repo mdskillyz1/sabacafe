@@ -87,7 +87,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ tabl
   const store = await readBookingStore();
   const table = store.tables.find((candidate) => candidate.id === tableId);
   if (!table) return NextResponse.json({ error: "Table not found." }, { status: 404 });
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
+  const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://sabacafe.co.uk").replace(/\/$/, "");
   const url = `${origin}/order?type=dine-in&table=${encodeURIComponent(table.name)}`;
   return new Response(qrSvg(url, table.name, origin), {
     headers: {
