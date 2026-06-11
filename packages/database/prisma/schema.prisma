@@ -249,6 +249,7 @@ model OrderItem {
   unitPricePence Int
   quantity       Int
   optionIds      String[]
+  optionLabels   String[] @default([])
   addOnIds       String[]
   notes          String?
 }

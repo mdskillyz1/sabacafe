@@ -301,6 +301,7 @@ async function createImportedMenuItem(item: MenuItem & { sortOrder?: number }, i
       sortOrder: item.sortOrder ?? index,
       options: {
         create: item.options.map((option) => ({
+          id: `${item.id}-${option.id}`,
           name: option.name,
           priceDeltaPence: option.priceDeltaPence
         }))
@@ -360,7 +361,22 @@ async function syncImportedMenuItems() {
           popular: item.popular,
           recommended: item.recommended,
           prepMinutes: item.prepMinutes,
-          sortOrder: item.sortOrder ?? index
+          sortOrder: item.sortOrder ?? index,
+          options: {
+            deleteMany: {},
+            create: item.options.map((option) => ({
+              id: `${item.id}-${option.id}`,
+              name: option.name,
+              priceDeltaPence: option.priceDeltaPence
+            }))
+          },
+          addOns: {
+            deleteMany: {},
+            create: item.addOns.map((addOn) => ({
+              name: addOn.name,
+              pricePence: addOn.pricePence
+            }))
+          }
         }
       });
     } else {

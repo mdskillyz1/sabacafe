@@ -146,11 +146,12 @@ export function OrderFlow() {
     return () => window.clearTimeout(timeout);
   }, [cartPulse]);
 
-  function addItem(item: MenuItem) {
+  function addItem(item: MenuItem, optionIds: string[] = [], optionLabels: string[] = []) {
     setLastAdded(item.name);
     setCartPulse(true);
     setCart((current) => {
-      const existing = current.find((line) => line.menuItemId === item.id && !line.optionIds.length && !line.addOnIds.length);
+      const optionKey = optionIds.slice().sort().join("|");
+      const existing = current.find((line) => line.menuItemId === item.id && line.optionIds.slice().sort().join("|") === optionKey && !line.addOnIds.length);
       if (existing) {
         return current.map((line) => (line === existing ? { ...line, quantity: line.quantity + 1 } : line));
       }
@@ -161,7 +162,8 @@ export function OrderFlow() {
           name: item.name,
           unitPricePence: item.pricePence,
           quantity: 1,
-          optionIds: [],
+          optionIds,
+          optionLabels,
           addOnIds: [],
           notes: ""
         }
@@ -173,10 +175,10 @@ export function OrderFlow() {
     basketRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  function changeQuantity(menuItemId: string, delta: number) {
+  function changeQuantity(lineIndex: number, delta: number) {
     setCart((current) =>
       current
-        .map((line) => (line.menuItemId === menuItemId ? { ...line, quantity: Math.max(0, line.quantity + delta) } : line))
+        .map((line, index) => (index === lineIndex ? { ...line, quantity: Math.max(0, line.quantity + delta) } : line))
         .filter((line) => line.quantity > 0)
     );
   }
@@ -420,19 +422,26 @@ export function OrderFlow() {
 
           <div className="mt-5 space-y-3">
             {cart.length ? (
-              cart.map((line) => (
-                <div key={line.menuItemId} className="rounded-lg border border-date/10 bg-cream/80 p-3">
+              cart.map((line, lineIndex) => (
+                <div key={`${line.menuItemId}-${line.optionIds.join("-")}-${lineIndex}`} className="rounded-lg border border-date/10 bg-cream/80 p-3">
                   <div className="flex justify-between gap-3">
                     <div>
                       <p className="font-semibold text-date">{line.name}</p>
                       <p className="text-sm text-date/60">{money(line.unitPricePence)} each</p>
+                      {line.optionLabels?.length ? (
+                        <ul className="mt-2 space-y-1 text-xs font-semibold text-clay">
+                          {line.optionLabels.map((label) => (
+                            <li key={label}>{label}</li>
+                          ))}
+                        </ul>
+                      ) : null}
                     </div>
                     <div className="flex h-9 items-center gap-2 rounded-full bg-white px-2">
-                      <button className="focus-ring rounded-full border border-date/15 p-1" onClick={() => changeQuantity(line.menuItemId, -1)} type="button">
+                      <button className="focus-ring rounded-full border border-date/15 p-1" onClick={() => changeQuantity(lineIndex, -1)} type="button">
                         <Minus size={14} />
                       </button>
                       <span className="w-5 text-center text-sm font-semibold">{line.quantity}</span>
-                      <button className="focus-ring rounded-full border border-date/15 p-1" onClick={() => changeQuantity(line.menuItemId, 1)} type="button">
+                      <button className="focus-ring rounded-full border border-date/15 p-1" onClick={() => changeQuantity(lineIndex, 1)} type="button">
                         <Plus size={14} />
                       </button>
                     </div>
@@ -442,7 +451,7 @@ export function OrderFlow() {
                     placeholder="Notes for kitchen"
                     className="focus-ring mt-3 w-full rounded-md border border-date/10 bg-white px-3 py-2 text-sm"
                     onChange={(event) =>
-                      setCart((current) => current.map((candidate) => (candidate.menuItemId === line.menuItemId ? { ...candidate, notes: event.target.value } : candidate)))
+                      setCart((current) => current.map((candidate, index) => (index === lineIndex ? { ...candidate, notes: event.target.value } : candidate)))
                     }
                   />
                 </div>

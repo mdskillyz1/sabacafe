@@ -61,6 +61,7 @@ export type CartLine = {
   unitPricePence: number;
   quantity: number;
   optionIds: string[];
+  optionLabels?: string[];
   addOnIds: string[];
   notes?: string;
 };
@@ -298,7 +299,8 @@ const sabaMenuItem = (
   name: string,
   pricePence: number,
   description: string,
-  sortOrder: number
+  sortOrder: number,
+  options: MenuItemOption[] = []
 ): MenuItem & { sortOrder?: number } => ({
   id,
   categoryId,
@@ -316,43 +318,93 @@ const sabaMenuItem = (
   popular: false,
   recommended: false,
   prepMinutes: 0,
-  options: [],
+  options,
   addOns: [],
   sortOrder
 });
 
+const choice = (group: string, name: string, priceDeltaPence = 0): MenuItemOption => ({
+  id: `${group}-${name}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+  name: `${group}: ${name}`,
+  priceDeltaPence
+});
+
+export function optionGroup(option: MenuItemOption) {
+  const [group] = option.name.split(":");
+  return option.name.includes(":") ? group.trim() : "";
+}
+
+export function optionDisplayName(option: MenuItemOption) {
+  const [, ...rest] = option.name.split(":");
+  return rest.length ? rest.join(":").trim() : option.name;
+}
+
+export function optionLabel(option: MenuItemOption) {
+  const group = optionGroup(option);
+  const displayName = optionDisplayName(option);
+  return group ? `${group}: ${displayName}` : displayName;
+}
+
+export function requiredOptionGroups(item: MenuItem) {
+  return Array.from(new Set(item.options.map(optionGroup).filter(Boolean)));
+}
+
 export const menuItems: (MenuItem & { sortOrder?: number })[] = [
-  sabaMenuItem("3-canjeero", "breakfast", "3 Canjeero", 150, "(Thin sourdough pancake)", 1),
-  sabaMenuItem("malawax", "breakfast", "Malawax", 100, "(a thin fragrant crepe)", 2),
-  sabaMenuItem("muufo", "breakfast", "Muufo", 200, "(a traditional flatbread)", 3),
-  sabaMenuItem("3-bajiyo", "breakfast", "3 Bajiyo", 100, "(Black-eye peas served with green chili sauce)", 4),
-  sabaMenuItem("chapati-sabayad", "breakfast", "Chapati / Sabayad", 200, "(unleavened flatbread)", 5),
-  sabaMenuItem("liver-only", "breakfast", "Liver Only", 500, "(Pan fried liver with onions and spices)", 6),
-  sabaMenuItem("kidney-only", "breakfast", "Kidney Only", 500, "(Pan fried kidney with onions and spices)", 7),
-  sabaMenuItem("odkac", "breakfast", "Odkac", 600, "(small beef cubes)", 8),
-  sabaMenuItem("beef-suqaar-breakfast", "breakfast", "Beef Suqaar", 600, "(small beef cubes)", 9),
-  sabaMenuItem("2-eggs-scrambled", "breakfast", "2 Eggs Scrambled", 350, "", 10),
-  sabaMenuItem("somali-breakfast-with-odkac", "breakfast", "Somali Breakfast with Odkac", 800, "(Comes with either Canjeero / Chapati and Somali Tea)", 11),
-  sabaMenuItem("somali-breakfast-with-beef-suqaar", "breakfast", "Somali Breakfast with Beef Suqaar", 800, "(Comes with either Canjeero / Chapati and Somali Tea)", 12),
-  sabaMenuItem("somali-breakfast-with-liver", "breakfast", "Somali Breakfast with Liver", 700, "(Comes with either Canjeero / Chapati and Somali Tea)", 13),
-  sabaMenuItem("somali-breakfast-with-kidney", "breakfast", "Somali Breakfast with Kidney", 700, "(Comes with either Canjeero / Chapati and Somali Tea)", 14),
-  sabaMenuItem("somali-breakfast-with-chicken-suqaar", "breakfast", "Somali Breakfast with Chicken Suqaar", 700, "(Comes with either Canjeero / Chapati and Somali Tea)", 15),
-  sabaMenuItem("lamb-shank", "main-dishes", "Lamb Shank", 1699, "(Slow cooked lamb shank on the bone, tender, falling off the bone and full of flavour - comes with either rice / pasta)", 16),
-  sabaMenuItem("saba-lamb", "main-dishes", "Saba Lamb", 1399, "(Slow cooked lamb, tender and full of flavour - comes with either rice / pasta)", 17),
-  sabaMenuItem("lamb-shank-only", "main-dishes", "Lamb Shank Only", 1200, "", 18),
-  sabaMenuItem("saba-lamb-only", "main-dishes", "Saba Lamb Only", 900, "", 19),
-  sabaMenuItem("beef-suqaar", "main-dishes", "Beef Suqaar", 1100, "(Comes with either rice / pasta)", 20),
-  sabaMenuItem("beef-steak", "main-dishes", "Beef Steak", 1100, "(Comes with either rice / pasta)", 21),
-  sabaMenuItem("beef-suqaar-only", "main-dishes", "Beef Suqaar Only", 600, "", 22),
-  sabaMenuItem("beef-steak-only", "main-dishes", "Beef Steak Only", 600, "", 23),
+  sabaMenuItem("somali-breakfast-1", "breakfast", "Somali Breakfast 1", 1200, "Choose Odkac or Beef Suqaar with your preferred breakfast side and tea option.", 1, [
+    choice("Meat option", "Odkac"),
+    choice("Meat option", "Beef Suqaar"),
+    choice("Side option", "Malawax"),
+    choice("Side option", "Canjeero", 200),
+    choice("Side option", "Chapati", 300),
+    choice("Tea option", "With Tea", 199),
+    choice("Tea option", "No Tea")
+  ]),
+  sabaMenuItem("somali-breakfast-2", "breakfast", "Somali Breakfast 2", 1200, "Choose Liver, Kidney, or Chicken Suqaar with your preferred breakfast side and tea option.", 2, [
+    choice("Meat option", "Liver"),
+    choice("Meat option", "Kidney"),
+    choice("Meat option", "Chicken Suqaar"),
+    choice("Side option", "Malawax"),
+    choice("Side option", "Canjeero", 200),
+    choice("Side option", "Chapati", 300),
+    choice("Tea option", "With Tea", 199),
+    choice("Tea option", "No Tea")
+  ]),
+  sabaMenuItem("lamb-shank", "main-dishes", "Lamb Shank", 1200, "(Slow cooked lamb shank on the bone, tender, falling off the bone and full of flavour)", 16, [
+    choice("Serving option", "Lamb only"),
+    choice("Serving option", "With Rice", 499),
+    choice("Serving option", "With Pasta", 499),
+    choice("Serving option", "With Federation", 499)
+  ]),
+  sabaMenuItem("saba-lamb", "main-dishes", "Saba Lamb", 900, "(Slow cooked lamb, tender and full of flavour)", 17, [
+    choice("Serving option", "Lamb only"),
+    choice("Serving option", "With Rice", 499),
+    choice("Serving option", "With Pasta", 499),
+    choice("Serving option", "With Federation", 499)
+  ]),
+  sabaMenuItem("beef-suqaar", "main-dishes", "Beef Suqaar", 600, "", 20, [
+    choice("Serving option", "Meat only"),
+    choice("Serving option", "With Rice", 500),
+    choice("Serving option", "With Pasta", 500),
+    choice("Serving option", "With Federation", 500)
+  ]),
+  sabaMenuItem("beef-steak", "main-dishes", "Beef Steak", 600, "", 21, [
+    choice("Serving option", "Meat only"),
+    choice("Serving option", "With Rice", 500),
+    choice("Serving option", "With Pasta", 500),
+    choice("Serving option", "With Federation", 500)
+  ]),
   sabaMenuItem("chicken-suqaar", "main-dishes", "Chicken Suqaar", 1000, "(Comes with either rice / pasta)", 24),
   sabaMenuItem("chicken-steak", "main-dishes", "Chicken Steak", 1000, "(Comes with either rice / pasta)", 25),
   sabaMenuItem("chicken-leg", "main-dishes", "Chicken Leg", 1000, "(Comes with either rice / pasta)", 26),
   sabaMenuItem("chicken-suqaar-only", "main-dishes", "Chicken Suqaar Only", 500, "", 27),
   sabaMenuItem("chicken-steak-only", "main-dishes", "Chicken Steak Only", 500, "", 28),
   sabaMenuItem("chicken-leg-only", "main-dishes", "Chicken Leg Only", 500, "", 29),
-  sabaMenuItem("salmon", "main-dishes", "Salmon", 1200, "(Comes with either rice / pasta)", 30),
-  sabaMenuItem("salmon-only", "main-dishes", "Salmon Only", 700, "", 31),
+  sabaMenuItem("salmon", "main-dishes", "Salmon", 700, "", 30, [
+    choice("Serving option", "Fish only"),
+    choice("Serving option", "With Rice", 500),
+    choice("Serving option", "With Pasta", 500),
+    choice("Serving option", "With Federation", 500)
+  ]),
   sabaMenuItem("rice-portion", "main-dishes", "Rice Portion", 550, "", 32),
   sabaMenuItem("pasta-portion", "main-dishes", "Pasta Portion", 550, "", 33),
   sabaMenuItem("soor-koosto", "main-dishes", "Soor & Koosto", 650, "(stiff cornmeal with spinach / swiss chard)", 34),

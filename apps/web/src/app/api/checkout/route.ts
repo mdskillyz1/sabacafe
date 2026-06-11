@@ -19,14 +19,14 @@ export async function POST(request: Request) {
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     payment_method_types: ["card"],
-    line_items: order.items.map((item) => ({
-      quantity: item.quantity,
+    line_items: [{
+      quantity: 1,
       price_data: {
         currency: "gbp",
-        unit_amount: item.unitPricePence,
-        product_data: { name: item.name }
+        unit_amount: order.totalPence,
+        product_data: { name: `Saba Cafe order ${order.orderNumber}` }
       }
-    })),
+    }],
     success_url: `${origin}/order-confirmation?order=${order.id}&payment=stripe-success`,
     cancel_url: `${origin}/order?payment=cancelled`,
     metadata: {

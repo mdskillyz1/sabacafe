@@ -1,5 +1,5 @@
 import { prisma } from "@saba/database";
-import { calculatePrice, type CartLine, type CheckoutInput, type OrderStatus, type OrderType, type PaymentMethod, type PaymentStatus } from "@saba/shared";
+import { calculatePrice, optionGroup, optionLabel, requiredOptionGroups, type CartLine, type CheckoutInput, type OrderStatus, type OrderType, type PaymentMethod, type PaymentStatus } from "@saba/shared";
 import { quoteDelivery } from "./delivery";
 import { getPublishedMenu } from "./menuStore";
 import { readOperationsSettings } from "./operationsSettings";
@@ -174,10 +174,13 @@ export async function ensureOrderSchema() {
       "unitPricePence" INTEGER NOT NULL DEFAULT 0,
       "quantity" INTEGER NOT NULL DEFAULT 1,
       "optionIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+      "optionLabels" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
       "addOnIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
       "notes" TEXT
     );
   `);
+
+  await db.$executeRawUnsafe(`ALTER TABLE "OrderItem" ADD COLUMN IF NOT EXISTS "optionLabels" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];`);
 
   await db.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS "Payment" (
@@ -277,6 +280,7 @@ async function hydrateOrders(rows: any[]) {
       unitPricePence: item.unitPricePence,
       quantity: item.quantity,
       optionIds: item.optionIds ?? [],
+      optionLabels: item.optionLabels ?? [],
       addOnIds: item.addOnIds ?? [],
       notes: item.notes ?? ""
     });
@@ -310,6 +314,18 @@ export async function createOrder(input: CheckoutInput) {
   if (!deliveryQuote.allowed) throw new Error(deliveryQuote.reason ?? "This address is outside our delivery radius.");
 
   const menu = await getPublishedMenu();
+  for (const line of input.items) {
+    const item = menu.items.find((candidate) => candidate.id === line.menuItemId);
+    if (!item) throw new Error(`${line.name || "This item"} is no longer available.`);
+    const requiredGroups = requiredOptionGroups(item);
+    if (!requiredGroups.length) continue;
+    const chosenOptions = item.options.filter((option) => line.optionIds?.includes(option.id));
+    const missingGroups = requiredGroups.filter((group) => !chosenOptions.some((option) => optionGroup(option) === group));
+    if (missingGroups.length) {
+      throw new Error(`Please choose ${missingGroups.join(", ")} for ${item.name}.`);
+    }
+    line.optionLabels = chosenOptions.map(optionLabel);
+  }
   const fulfilmentType = orderTypeToLegacyFulfilment(orderType);
   const totals = calculatePrice(
     input.items,
@@ -381,8 +397,8 @@ export async function createOrder(input: CheckoutInput) {
 
     for (const line of input.items) {
       await tx.$executeRawUnsafe(
-        `INSERT INTO "OrderItem" ("id", "orderId", "menuItemId", "name", "unitPricePence", "quantity", "optionIds", "addOnIds", "notes")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        `INSERT INTO "OrderItem" ("id", "orderId", "menuItemId", "name", "unitPricePence", "quantity", "optionIds", "optionLabels", "addOnIds", "notes")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         crypto.randomUUID(),
         id,
         line.menuItemId,
@@ -390,6 +406,7 @@ export async function createOrder(input: CheckoutInput) {
         line.unitPricePence,
         line.quantity,
         line.optionIds ?? [],
+        line.optionLabels ?? [],
         line.addOnIds ?? [],
         line.notes ?? null
       );

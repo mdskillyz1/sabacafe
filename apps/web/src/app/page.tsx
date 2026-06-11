@@ -6,7 +6,7 @@ import { Badge } from "@/components/Badge";
 import { FoodImage } from "@/components/FoodImage";
 import { BookingWidget } from "./BookingWidget";
 import { getMenu } from "@/lib/data";
-import { businessInfo, googleReviewSummary, money, openingHours, type MenuItem } from "@saba/shared";
+import { businessInfo, googleReviewSummary, money, openingHours, requiredOptionGroups, type MenuItem } from "@saba/shared";
 
 async function getFeaturedItems() {
   try {
@@ -95,7 +95,9 @@ export default async function HomePage() {
                       <h3 className="font-display text-2xl font-semibold text-date">{item.name}</h3>
                       <p className="mt-2 line-clamp-2 text-sm leading-6 text-date/70">{item.description}</p>
                     </div>
-                    <p className="shrink-0 font-semibold text-clay">{money(item.pricePence)}</p>
+                    <p className="shrink-0 font-semibold text-clay">
+                      {requiredOptionGroups(item).length ? `From ${money(item.pricePence)}` : money(item.pricePence)}
+                    </p>
                   </div>
                   <Link href="/order" className="mt-5 inline-flex rounded-full bg-date px-5 py-3 text-sm font-semibold text-cream">
                     Order this

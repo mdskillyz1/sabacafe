@@ -25,6 +25,20 @@ export default async function OrderConfirmationPage({ searchParams }: { searchPa
         <div className="mx-auto mt-6 rounded-lg border border-date/10 bg-white p-5 text-left shadow-sm">
           <p className="font-semibold text-date">{order.orderType.replace("_", "-")} {order.tableNumber ? `• Table ${order.tableNumber}` : ""}</p>
           <p className="mt-1 text-sm text-date/60">Payment: {order.paymentStatus} • Total {money(order.totalPence)} • Tracking {order.trackingCode}</p>
+          <div className="mt-4 space-y-2 rounded-md bg-cream p-3">
+            {order.items.map((item, index) => (
+              <div key={`${item.name}-${index}`} className="text-sm">
+                <p className="font-semibold text-date">{item.quantity}x {item.name}</p>
+                {item.optionLabels?.length ? (
+                  <ul className="mt-1 space-y-1 text-xs font-semibold text-clay">
+                    {item.optionLabels.map((label) => (
+                      <li key={label}>{label}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ))}
+          </div>
           {order.paymentMethod === "PAY_IN_STORE" || order.paymentStatus === "PENDING_PAYMENT" ? (
             <p className="mt-4 rounded-md bg-saffron/15 p-3 text-sm font-semibold text-date">Please pay at the counter. A staff member will prepare your food shortly.</p>
           ) : null}

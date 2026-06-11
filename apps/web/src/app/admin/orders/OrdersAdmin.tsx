@@ -16,8 +16,8 @@ type Order = {
   paymentStatus: string;
   customerName: string;
   customerPhone?: string;
-  checkout: { customerName: string; fulfilmentType: string; items: { name: string; quantity: number }[] };
-  items: { name: string; quantity: number; notes?: string }[];
+  checkout: { customerName: string; fulfilmentType: string; items: { name: string; quantity: number; optionLabels?: string[]; notes?: string }[] };
+  items: { name: string; quantity: number; optionLabels?: string[]; notes?: string }[];
   totals: { totalPence: number };
   totalPence: number;
   createdAt: string;
@@ -318,10 +318,19 @@ export function OrdersAdmin({ initialOrderType = "ALL", kitchenMode = false }: {
                       <ChefHat size={14} /> Food order
                     </p>
                     <div className="space-y-2">
-                      {(order.items ?? order.checkout.items).map((item) => (
-                        <div key={`${order.id}-${item.name}`} className="flex justify-between gap-3 rounded-md bg-cream px-3 py-2 text-sm">
-                          <span className="font-semibold text-date">{item.quantity}x {item.name}</span>
-                          {item.notes ? <span className="text-date/55">{item.notes}</span> : null}
+                      {(order.items ?? order.checkout.items).map((item, itemIndex) => (
+                        <div key={`${order.id}-${item.name}-${itemIndex}`} className="rounded-md bg-cream px-3 py-2 text-sm">
+                          <div className="flex justify-between gap-3">
+                            <span className="font-semibold text-date">{item.quantity}x {item.name}</span>
+                            {item.notes ? <span className="text-date/55">{item.notes}</span> : null}
+                          </div>
+                          {item.optionLabels?.length ? (
+                            <ul className="mt-2 grid gap-1 text-xs font-semibold text-clay">
+                              {item.optionLabels.map((label) => (
+                                <li key={label}>{label}</li>
+                              ))}
+                            </ul>
+                          ) : null}
                         </div>
                       ))}
                     </div>
