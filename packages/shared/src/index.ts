@@ -475,11 +475,30 @@ export const menuItems: (MenuItem & { sortOrder?: number })[] = [
     choice("Flavour", "Lotus")
   ]),
   sabaMenuItem("cambuulo", "sides-desserts", "Cambuulo", 400, "(slow-cooked adzuki beans with/or wheat berries or corn)", 49),
-  sabaMenuItem("saba-special-plateau", "special-plateau", "Saba Special Plateau", 3999, "Choose your plateau size and lamb option.", 50, [
-    choice("Plateau option", "Special Plateau serves 2-3 with Saba Lamb"),
-    choice("Plateau option", "Special Plateau serves 2-3 with Lamb Shank", 300),
-    choice("Plateau option", "Bigger Plateau serves 4-5 with Saba Lamb", 2500),
-    choice("Plateau option", "Bigger Plateau serves 4-5 with Lamb Shank", 3300)
+  sabaMenuItem("saba-special-plateau", "special-plateau", "Saba Special Plateau (serves 2-3)", 4299, "Choose 1 main meat, 1 extra meat, and 3 Rice/Pasta side portions.", 50, [
+    choice("Main Meat", "Lamb Shank"),
+    choice("Main Meat", "Saba Lamb"),
+    choice("Extra Meat", "Salmon"),
+    choice("Extra Meat", "Beef Steak"),
+    choice("Extra Meat", "Beef Suqaar"),
+    choice("Extra Meat", "Chicken Suqaar"),
+    choice("Extra Meat", "Chicken Steak"),
+    choice("Extra Meat", "Half Beef Suqaar + Half Chicken Suqaar"),
+    choice("Extra Meat", "Half Chicken Steak + Half Chicken Leg"),
+    choice("Sides", "Rice"),
+    choice("Sides", "Pasta")
+  ]),
+  sabaMenuItem("bigger-plateau", "special-plateau", "Bigger Plateau (serves 4-5)", 7299, "Choose 2 main meat portions, 3 extra meat portions, and 5 Rice/Pasta side portions.", 51, [
+    choice("Main Meat", "Lamb Shank"),
+    choice("Main Meat", "Saba Lamb"),
+    choice("Extra Meat", "Salmon"),
+    choice("Extra Meat", "Beef Steak"),
+    choice("Extra Meat", "Beef Suqaar"),
+    choice("Extra Meat", "Chicken Suqaar"),
+    choice("Extra Meat", "Chicken Steak"),
+    choice("Extra Meat", "Chicken Leg"),
+    choice("Sides", "Rice"),
+    choice("Sides", "Pasta")
   ]),
   sabaMenuItem("half-lamb-2-5kg-rice", "large-meals", "Half Lamb & 2.5Kg Rice", 17500, "(Comes with salad and chilli) 75% Deposit is required before order", 54),
   sabaMenuItem("full-lamb-5kg-rice", "large-meals", "Full Lamb & 5Kg Rice", 35000, "(Comes with salad and chilli) 75% Deposit is required before order", 55),

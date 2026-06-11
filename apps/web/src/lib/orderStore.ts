@@ -1,5 +1,5 @@
 import { prisma } from "@saba/database";
-import { calculatePrice, isItemOrderableToday, optionGroup, optionLabel, requiredOptionGroups, type CartLine, type CheckoutInput, type OrderStatus, type OrderType, type PaymentMethod, type PaymentStatus } from "@saba/shared";
+import { calculatePrice, isItemOrderableToday, optionDisplayName, optionGroup, requiredOptionGroups, type CartLine, type CheckoutInput, type MenuItemOption, type OrderStatus, type OrderType, type PaymentMethod, type PaymentStatus } from "@saba/shared";
 import { quoteDelivery } from "./delivery";
 import { getPublishedMenu } from "./menuStore";
 import { readOperationsSettings } from "./operationsSettings";
@@ -60,6 +60,43 @@ function defaultPaymentMethod(orderType: OrderType): PaymentMethod {
   if (orderType === "DINE_IN") return "PAY_IN_STORE";
   if (orderType === "DELIVERY") return "STRIPE_ONLINE";
   return "CASH_ON_COLLECTION";
+}
+
+function aggregateOptionLabels(options: MenuItemOption[]) {
+  const counts = new Map<string, { option: MenuItemOption; count: number }>();
+  for (const option of options) {
+    const key = option.id;
+    const current = counts.get(key);
+    counts.set(key, { option, count: (current?.count ?? 0) + 1 });
+  }
+  return Array.from(counts.values()).map(({ option, count }) => {
+    const group = optionGroup(option);
+    const display = optionDisplayName(option);
+    return `${group}: ${display}${count > 1 ? ` x${count}` : ""}`;
+  });
+}
+
+function countGroup(options: MenuItemOption[], group: string) {
+  return options.filter((option) => optionGroup(option) === group).length;
+}
+
+function validatePlatter(itemId: string, itemName: string, selectedOptions: MenuItemOption[]) {
+  if (itemId !== "saba-special-plateau" && itemId !== "bigger-plateau") return;
+  const mainTotal = countGroup(selectedOptions, "Main Meat");
+  const extraTotal = countGroup(selectedOptions, "Extra Meat");
+  const sideTotal = countGroup(selectedOptions, "Sides");
+
+  if (itemId === "saba-special-plateau") {
+    if (mainTotal !== 1) throw new Error(`Please choose 1 main meat for ${itemName}.`);
+    if (extraTotal !== 1) throw new Error(`Please choose 1 extra meat for ${itemName}.`);
+    if (sideTotal !== 3) throw new Error(`Please choose exactly 3 Rice/Pasta side portions for ${itemName}.`);
+  }
+
+  if (itemId === "bigger-plateau") {
+    if (mainTotal !== 2) throw new Error(`Please choose 2 main meat portions for ${itemName}.`);
+    if (extraTotal !== 3) throw new Error(`Please choose 3 extra meat portions for ${itemName}.`);
+    if (sideTotal !== 5) throw new Error(`Please choose exactly 5 Rice/Pasta side portions for ${itemName}.`);
+  }
 }
 
 async function addEnumValue(typeName: string, value: string) {
@@ -318,14 +355,18 @@ export async function createOrder(input: CheckoutInput) {
     const item = menu.items.find((candidate) => candidate.id === line.menuItemId);
     if (!item) throw new Error(`${line.name || "This item"} is no longer available.`);
     if (!isItemOrderableToday(item)) throw new Error(`${item.name} is only available on Tuesday and Friday.`);
+    const selectedOptions = (line.optionIds ?? [])
+      .map((optionId) => item.options.find((option) => option.id === optionId))
+      .filter((option): option is MenuItemOption => Boolean(option));
+    validatePlatter(item.id, item.name, selectedOptions);
     const requiredGroups = requiredOptionGroups(item);
-    if (!requiredGroups.length) continue;
-    const chosenOptions = item.options.filter((option) => line.optionIds?.includes(option.id));
-    const missingGroups = requiredGroups.filter((group) => !chosenOptions.some((option) => optionGroup(option) === group));
-    if (missingGroups.length) {
-      throw new Error(`Please choose ${missingGroups.join(", ")} for ${item.name}.`);
+    if (requiredGroups.length) {
+      const missingGroups = requiredGroups.filter((group) => !selectedOptions.some((option) => optionGroup(option) === group));
+      if (missingGroups.length) {
+        throw new Error(`Please choose ${missingGroups.join(", ")} for ${item.name}.`);
+      }
     }
-    line.optionLabels = chosenOptions.map(optionLabel);
+    line.optionLabels = selectedOptions.length ? aggregateOptionLabels(selectedOptions) : [];
   }
   const fulfilmentType = orderTypeToLegacyFulfilment(orderType);
   const totals = calculatePrice(
