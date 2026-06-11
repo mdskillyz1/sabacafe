@@ -350,23 +350,21 @@ export function requiredOptionGroups(item: MenuItem) {
 }
 
 export const menuItems: (MenuItem & { sortOrder?: number })[] = [
-  sabaMenuItem("somali-breakfast-1", "breakfast", "Somali Breakfast 1", 1200, "Choose Odkac or Beef Suqaar with your preferred breakfast side and tea option.", 1, [
+  sabaMenuItem("somali-breakfast-1", "breakfast", "Somali Breakfast with Odkac / Beef Suqaar", 800, "Comes with either Canjeero / Chapati and Somali Tea.", 1, [
     choice("Meat option", "Odkac"),
     choice("Meat option", "Beef Suqaar"),
-    choice("Side option", "Malawax"),
-    choice("Side option", "Canjeero", 200),
-    choice("Side option", "Chapati", 300),
-    choice("Tea option", "With Tea", 199),
+    choice("Side choice", "Canjeero"),
+    choice("Side choice", "Chapati"),
+    choice("Tea option", "With Somali Tea"),
     choice("Tea option", "No Tea")
   ]),
-  sabaMenuItem("somali-breakfast-2", "breakfast", "Somali Breakfast 2", 1200, "Choose Liver, Kidney, or Chicken Suqaar with your preferred breakfast side and tea option.", 2, [
+  sabaMenuItem("somali-breakfast-2", "breakfast", "Somali Breakfast with Liver / Kidney / Chicken Suqaar", 700, "Comes with either Canjeero / Chapati and Somali Tea.", 2, [
     choice("Meat option", "Liver"),
     choice("Meat option", "Kidney"),
     choice("Meat option", "Chicken Suqaar"),
-    choice("Side option", "Malawax"),
-    choice("Side option", "Canjeero", 200),
-    choice("Side option", "Chapati", 300),
-    choice("Tea option", "With Tea", 199),
+    choice("Side choice", "Canjeero"),
+    choice("Side choice", "Chapati"),
+    choice("Tea option", "With Somali Tea"),
     choice("Tea option", "No Tea")
   ]),
   sabaMenuItem("lamb-shank", "main-dishes", "Lamb Shank", 1200, "(Slow cooked lamb shank on the bone, tender, falling off the bone and full of flavour)", 16, [
@@ -376,31 +374,43 @@ export const menuItems: (MenuItem & { sortOrder?: number })[] = [
     choice("Serving option", "With Federation", 499)
   ]),
   sabaMenuItem("saba-lamb", "main-dishes", "Saba Lamb", 900, "(Slow cooked lamb, tender and full of flavour)", 17, [
-    choice("Serving option", "Lamb only"),
+    choice("Serving option", "Only"),
     choice("Serving option", "With Rice", 499),
     choice("Serving option", "With Pasta", 499),
     choice("Serving option", "With Federation", 499)
   ]),
   sabaMenuItem("beef-suqaar", "main-dishes", "Beef Suqaar", 600, "", 20, [
-    choice("Serving option", "Meat only"),
+    choice("Serving option", "Only"),
     choice("Serving option", "With Rice", 500),
     choice("Serving option", "With Pasta", 500),
     choice("Serving option", "With Federation", 500)
   ]),
   sabaMenuItem("beef-steak", "main-dishes", "Beef Steak", 600, "", 21, [
-    choice("Serving option", "Meat only"),
+    choice("Serving option", "Only"),
     choice("Serving option", "With Rice", 500),
     choice("Serving option", "With Pasta", 500),
     choice("Serving option", "With Federation", 500)
   ]),
-  sabaMenuItem("chicken-suqaar", "main-dishes", "Chicken Suqaar", 1000, "(Comes with either rice / pasta)", 24),
-  sabaMenuItem("chicken-steak", "main-dishes", "Chicken Steak", 1000, "(Comes with either rice / pasta)", 25),
-  sabaMenuItem("chicken-leg", "main-dishes", "Chicken Leg", 1000, "(Comes with either rice / pasta)", 26),
-  sabaMenuItem("chicken-suqaar-only", "main-dishes", "Chicken Suqaar Only", 500, "", 27),
-  sabaMenuItem("chicken-steak-only", "main-dishes", "Chicken Steak Only", 500, "", 28),
-  sabaMenuItem("chicken-leg-only", "main-dishes", "Chicken Leg Only", 500, "", 29),
+  sabaMenuItem("chicken-suqaar", "main-dishes", "Chicken Suqaar", 500, "", 24, [
+    choice("Serving option", "Only"),
+    choice("Serving option", "With Rice", 500),
+    choice("Serving option", "With Pasta", 500),
+    choice("Serving option", "With Federation", 500)
+  ]),
+  sabaMenuItem("chicken-steak", "main-dishes", "Chicken Steak", 500, "", 25, [
+    choice("Serving option", "Only"),
+    choice("Serving option", "With Rice", 500),
+    choice("Serving option", "With Pasta", 500),
+    choice("Serving option", "With Federation", 500)
+  ]),
+  sabaMenuItem("chicken-leg", "main-dishes", "Chicken Leg", 500, "", 26, [
+    choice("Serving option", "Only"),
+    choice("Serving option", "With Rice", 500),
+    choice("Serving option", "With Pasta", 500),
+    choice("Serving option", "With Federation", 500)
+  ]),
   sabaMenuItem("salmon", "main-dishes", "Salmon", 700, "", 30, [
-    choice("Serving option", "Fish only"),
+    choice("Serving option", "Only"),
     choice("Serving option", "With Rice", 500),
     choice("Serving option", "With Pasta", 500),
     choice("Serving option", "With Federation", 500)
@@ -412,21 +422,27 @@ export const menuItems: (MenuItem & { sortOrder?: number })[] = [
   sabaMenuItem("koosto", "main-dishes", "Koosto", 200, "(spinach or swiss chard)", 36),
   sabaMenuItem("soup-of-the-day", "main-dishes", "Soup of the Day", 250, "(Every Tuesday and Friday, made from fish or lamb with vegetables)", 37),
   sabaMenuItem("xulbo", "main-dishes", "Xulbo", 100, "(fenugreek)", 38),
-  sabaMenuItem("sambuus-meat", "sides-desserts", "Meat Sambuus", 150, "(Choice of meat or chicken or fish)", 39),
-  sabaMenuItem("sambuus-chicken", "sides-desserts", "Chicken Sambuus", 150, "(Choice of meat or chicken or fish)", 40),
-  sabaMenuItem("sambuus-fish", "sides-desserts", "Fish Sambuus", 150, "(Choice of meat or chicken or fish)", 41),
+  sabaMenuItem("sambusa", "sides-desserts", "Sambusa", 150, "(Choice of meat or chicken or fish)", 39, [
+    choice("Filling", "Meat"),
+    choice("Filling", "Chicken"),
+    choice("Filling", "Fish")
+  ]),
   sabaMenuItem("mandazi", "sides-desserts", "Mandazi", 100, "(fried bread)", 42),
   sabaMenuItem("somali-cake", "sides-desserts", "Somali Cake", 100, "(a slice)", 43),
   sabaMenuItem("saba-special-salad", "sides-desserts", "Saba Special Salad", 500, "", 44),
   sabaMenuItem("hummus-odkac-starter", "sides-desserts", "Hummus & Odkac Starter", 300, "", 45),
   sabaMenuItem("tiramisu", "sides-desserts", "Tiramisu", 600, "", 46),
-  sabaMenuItem("oreo-milk-cake", "sides-desserts", "Oreo Milk Cake", 600, "(Homemade cake with a lasting sweet)", 47),
-  sabaMenuItem("lotus-milk-cake", "sides-desserts", "Lotus Milk Cake", 600, "(Homemade cake with a lasting sweet)", 48),
+  sabaMenuItem("milk-cake", "sides-desserts", "Milk Cake", 600, "(Comes in either Oreo or Lotus, made with homemade cake with a lasting sweet)", 47, [
+    choice("Flavour", "Oreo"),
+    choice("Flavour", "Lotus")
+  ]),
   sabaMenuItem("cambuulo", "sides-desserts", "Cambuulo", 400, "(slow-cooked adzuki beans with/or wheat berries or corn)", 49),
-  sabaMenuItem("special-plateau-lamb-shank", "special-plateau", "Special Plateau with Lamb Shank", 4299, "(serves 2 - 3) (Comes with 3 portions of either rice/pasta, 1 portion of Lamb Shank, 1 portion salmon, with small portion of beef suqaar and chicken suqaar)", 50),
-  sabaMenuItem("special-plateau-saba-lamb", "special-plateau", "Special Plateau with Saba Lamb", 3999, "(serves 2 - 3) (Comes with 3 portions of either rice/pasta, 1 portion of Saba Lamb, 1 portion salmon, with small portion of beef suqaar and chicken suqaar)", 51),
-  sabaMenuItem("bigger-plateau-lamb-shank", "special-plateau", "Bigger Plateau with Lamb Shank", 7299, "(serves 4 - 5) (Comes with 5 portions of either rice/pasta, 2 portions of Lamb Shank and 1 portion salmon, with generous portion of beef suqaar and chicken suqaar)", 52),
-  sabaMenuItem("bigger-plateau-saba-lamb", "special-plateau", "Bigger Plateau with Saba Lamb", 6499, "(serves 4 - 5) (Comes with 5 portions of either rice/pasta, 2 portions of Saba Lamb and 1 portion salmon, with generous portion of beef suqaar and chicken suqaar)", 53),
+  sabaMenuItem("saba-special-plateau", "special-plateau", "Saba Special Plateau", 3999, "Choose your plateau size and lamb option.", 50, [
+    choice("Plateau option", "Special Plateau serves 2-3 with Saba Lamb"),
+    choice("Plateau option", "Special Plateau serves 2-3 with Lamb Shank", 300),
+    choice("Plateau option", "Bigger Plateau serves 4-5 with Saba Lamb", 2500),
+    choice("Plateau option", "Bigger Plateau serves 4-5 with Lamb Shank", 3300)
+  ]),
   sabaMenuItem("half-lamb-2-5kg-rice", "large-meals", "Half Lamb & 2.5Kg Rice", 17500, "(Comes with salad and chilli) 75% Deposit is required before order", 54),
   sabaMenuItem("full-lamb-5kg-rice", "large-meals", "Full Lamb & 5Kg Rice", 35000, "(Comes with salad and chilli) 75% Deposit is required before order", 55),
   sabaMenuItem("somali-tea", "hot-drinks", "Somali Tea", 150, "", 56),
@@ -436,11 +452,13 @@ export const menuItems: (MenuItem & { sortOrder?: number })[] = [
   sabaMenuItem("cappuccino", "hot-drinks", "Cappuccino", 250, "", 60),
   sabaMenuItem("latte", "hot-drinks", "Latte", 250, "", 61),
   sabaMenuItem("americano", "hot-drinks", "Americano", 350, "", 62),
-  sabaMenuItem("strawberry-mojito", "cold-drinks", "Strawberry Mojito", 250, "", 63),
-  sabaMenuItem("passion-mojito", "cold-drinks", "Passion Mojito", 250, "", 64),
-  sabaMenuItem("lime-mojito", "cold-drinks", "Lime Mojito", 250, "", 65),
-  sabaMenuItem("mango-mojito", "cold-drinks", "Mango Mojito", 250, "", 66),
-  sabaMenuItem("mixed-mojito", "cold-drinks", "Mixed Mojito", 250, "", 67),
+  sabaMenuItem("mojito", "cold-drinks", "Mojito", 250, "(Strawberry or Passion or Lime or Mango or a Mix of either)", 63, [
+    choice("Flavour", "Strawberry"),
+    choice("Flavour", "Passion"),
+    choice("Flavour", "Lime"),
+    choice("Flavour", "Mango"),
+    choice("Flavour", "Mix")
+  ]),
   sabaMenuItem("cans", "cold-drinks", "Cans", 100, "", 68),
   sabaMenuItem("tropical", "cold-drinks", "Tropical", 130, "", 69),
   sabaMenuItem("jug-juice", "cold-drinks", "Jug Juice", 900, "", 70),
