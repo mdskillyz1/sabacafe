@@ -1,5 +1,5 @@
 import { prisma } from "@saba/database";
-import { calculatePrice, optionGroup, optionLabel, requiredOptionGroups, type CartLine, type CheckoutInput, type OrderStatus, type OrderType, type PaymentMethod, type PaymentStatus } from "@saba/shared";
+import { calculatePrice, isItemOrderableToday, optionGroup, optionLabel, requiredOptionGroups, type CartLine, type CheckoutInput, type OrderStatus, type OrderType, type PaymentMethod, type PaymentStatus } from "@saba/shared";
 import { quoteDelivery } from "./delivery";
 import { getPublishedMenu } from "./menuStore";
 import { readOperationsSettings } from "./operationsSettings";
@@ -317,6 +317,7 @@ export async function createOrder(input: CheckoutInput) {
   for (const line of input.items) {
     const item = menu.items.find((candidate) => candidate.id === line.menuItemId);
     if (!item) throw new Error(`${line.name || "This item"} is no longer available.`);
+    if (!isItemOrderableToday(item)) throw new Error(`${item.name} is only available on Tuesday and Friday.`);
     const requiredGroups = requiredOptionGroups(item);
     if (!requiredGroups.length) continue;
     const chosenOptions = item.options.filter((option) => line.optionIds?.includes(option.id));

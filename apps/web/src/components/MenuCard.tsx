@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Badge } from "./Badge";
 import { FoodImage } from "./FoodImage";
-import { money, optionDisplayName, optionGroup, optionLabel, requiredOptionGroups, type MenuItem, type MenuItemOption } from "@saba/shared";
+import { itemAvailabilityMessage, isItemOrderableToday, money, optionDisplayName, optionGroup, optionLabel, requiredOptionGroups, type MenuItem, type MenuItemOption } from "@saba/shared";
 
 export function MenuCard({
   item,
@@ -27,6 +27,8 @@ export function MenuCard({
   const priceDelta = chosenOptions.reduce((sum, option) => sum + option.priceDeltaPence, 0);
   const displayPrice = item.pricePence + priceDelta;
   const missingRequired = groups.some((group) => !selectedOptions[group]);
+  const orderableToday = isItemOrderableToday(item);
+  const unavailableMessage = itemAvailabilityMessage(item);
 
   return (
     <article className={`grid w-full min-w-0 max-w-full overflow-hidden rounded-lg border border-date/10 bg-white shadow-sm ${compact ? "" : "sm:grid-cols-[160px_1fr] lg:grid-cols-[180px_1fr]"}`}>
@@ -81,22 +83,22 @@ export function MenuCard({
         {onAdd ? (
           <button
             type="button"
-            disabled={!item.available || missingRequired}
+            disabled={!orderableToday || missingRequired}
             onClick={() => onAdd(item, selectedOptionIds, selectedOptionLabels)}
             className={`focus-ring mt-auto w-full rounded-full px-4 py-3 text-center text-sm font-semibold text-cream transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-date/30 ${
               quantity > 0 ? "bg-mint" : "bg-date"
             }`}
           >
-            {!item.available ? "Unavailable" : missingRequired ? "Choose options first" : quantity > 0 ? `Added x${quantity}` : "Add to basket"}
+            {!orderableToday ? unavailableMessage : missingRequired ? "Choose options first" : quantity > 0 ? `Added x${quantity}` : "Add to basket"}
           </button>
         ) : (
           <Link
             href="/order"
             className={`focus-ring mt-auto w-full rounded-full px-4 py-3 text-center text-sm font-semibold ${
-              item.available ? "bg-date text-cream" : "pointer-events-none bg-date/30 text-cream"
+              orderableToday ? "bg-date text-cream" : "pointer-events-none bg-date/30 text-cream"
             }`}
           >
-            {item.available ? "Order this" : "Unavailable"}
+            {orderableToday ? "Order this" : unavailableMessage}
           </Link>
         )}
       </div>

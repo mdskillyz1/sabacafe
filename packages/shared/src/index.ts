@@ -349,8 +349,38 @@ export function requiredOptionGroups(item: MenuItem) {
   return Array.from(new Set(item.options.map(optionGroup).filter(Boolean)));
 }
 
+export function londonWeekday(date = new Date()) {
+  return new Intl.DateTimeFormat("en-GB", { weekday: "long", timeZone: "Europe/London" }).format(date);
+}
+
+export function isItemOrderableToday(item: Pick<MenuItem, "id" | "available">, date = new Date()) {
+  if (!item.available) return false;
+  if (item.id !== "soup-of-the-day") return true;
+  return ["Tuesday", "Friday"].includes(londonWeekday(date));
+}
+
+export function itemAvailabilityMessage(item: Pick<MenuItem, "id" | "available">, date = new Date()) {
+  if (!item.available) return "Unavailable";
+  if (item.id === "soup-of-the-day" && !isItemOrderableToday(item, date)) return "Available Tuesday and Friday only";
+  return "";
+}
+
 export const menuItems: (MenuItem & { sortOrder?: number })[] = [
-  sabaMenuItem("somali-breakfast-1", "breakfast", "Somali Breakfast with Odkac / Beef Suqaar", 800, "Comes with either Canjeero / Chapati and Somali Tea.", 1, [
+  sabaMenuItem("3-canjeero", "breakfast", "3 Canjeero", 150, "(Thin sourdough pancake)", 1),
+  sabaMenuItem("malawax", "breakfast", "Malawax", 100, "(a thin fragrant crepe)", 2),
+  sabaMenuItem("muufo", "breakfast", "Muufo", 200, "(a traditional flatbread)", 3),
+  sabaMenuItem("3-bajiyo", "breakfast", "3 Bajiyo", 100, "(black-eye peas served with green chili sauce)", 4),
+  sabaMenuItem("chapati-sabayad", "breakfast", "Chapati / Sabayad", 200, "(unleavened flatbread)", 5),
+  sabaMenuItem("liver-kidney-only", "breakfast", "Liver / Kidney Only", 500, "(Pan fried liver or kidney with onions and spices)", 6, [
+    choice("Main choice", "Liver"),
+    choice("Main choice", "Kidney")
+  ]),
+  sabaMenuItem("odkac-beef-suqaar", "breakfast", "Odkac / Beef Suqaar", 600, "(small beef cubes)", 7, [
+    choice("Main choice", "Odkac"),
+    choice("Main choice", "Beef Suqaar")
+  ]),
+  sabaMenuItem("2-eggs-scrambled", "breakfast", "2 Eggs Scrambled", 350, "", 8),
+  sabaMenuItem("somali-breakfast-1", "breakfast", "Somali Breakfast with Odkac / Beef Suqaar", 800, "Comes with either Canjeero / Chapati and Somali Tea.", 9, [
     choice("Meat option", "Odkac"),
     choice("Meat option", "Beef Suqaar"),
     choice("Side choice", "Canjeero"),
@@ -358,7 +388,7 @@ export const menuItems: (MenuItem & { sortOrder?: number })[] = [
     choice("Tea option", "With Somali Tea"),
     choice("Tea option", "No Tea")
   ]),
-  sabaMenuItem("somali-breakfast-2", "breakfast", "Somali Breakfast with Liver / Kidney / Chicken Suqaar", 700, "Comes with either Canjeero / Chapati and Somali Tea.", 2, [
+  sabaMenuItem("somali-breakfast-2", "breakfast", "Somali Breakfast with Liver / Kidney / Chicken Suqaar", 700, "Comes with either Canjeero / Chapati and Somali Tea.", 10, [
     choice("Meat option", "Liver"),
     choice("Meat option", "Kidney"),
     choice("Meat option", "Chicken Suqaar"),
@@ -417,10 +447,15 @@ export const menuItems: (MenuItem & { sortOrder?: number })[] = [
   ]),
   sabaMenuItem("rice-portion", "main-dishes", "Rice Portion", 550, "", 32),
   sabaMenuItem("pasta-portion", "main-dishes", "Pasta Portion", 550, "", 33),
-  sabaMenuItem("soor-koosto", "main-dishes", "Soor & Koosto", 650, "(stiff cornmeal with spinach / swiss chard)", 34),
-  sabaMenuItem("soor-only", "main-dishes", "Soor Only", 450, "(cornmeal)", 35),
-  sabaMenuItem("koosto", "main-dishes", "Koosto", 200, "(spinach or swiss chard)", 36),
-  sabaMenuItem("soup-of-the-day", "main-dishes", "Soup of the Day", 250, "(Every Tuesday and Friday, made from fish or lamb with vegetables)", 37),
+  sabaMenuItem("soor-koosto", "main-dishes", "Soor & Koosto", 200, "(stiff cornmeal with spinach / swiss chard)", 34, [
+    choice("Serving option", "Koosto only"),
+    choice("Serving option", "Soor only", 250),
+    choice("Serving option", "Soor & Koosto", 450)
+  ]),
+  sabaMenuItem("soup-of-the-day", "main-dishes", "Soup of the Day", 250, "(Every Tuesday and Friday, made from fish or lamb with vegetables)", 37, [
+    choice("Soup choice", "Fish"),
+    choice("Soup choice", "Lamb")
+  ]),
   sabaMenuItem("xulbo", "main-dishes", "Xulbo", 100, "(fenugreek)", 38),
   sabaMenuItem("sambusa", "sides-desserts", "Sambusa", 150, "(Choice of meat or chicken or fish)", 39, [
     choice("Filling", "Meat"),
