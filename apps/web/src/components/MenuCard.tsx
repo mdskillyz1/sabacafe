@@ -13,12 +13,13 @@ export function MenuCard({
   quantity = 0
 }: {
   item: MenuItem;
-  onAdd?: (item: MenuItem, optionIds?: string[], optionLabels?: string[]) => void;
+  onAdd?: (item: MenuItem, optionIds?: string[], optionLabels?: string[], notes?: string) => void;
   compact?: boolean;
   quantity?: number;
 }) {
   const groups = useMemo(() => requiredOptionGroups(item), [item]);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState("");
   const chosenOptions = groups
     .map((group) => item.options.find((option) => option.id === selectedOptions[group]))
     .filter((option): option is MenuItemOption => Boolean(option));
@@ -81,16 +82,27 @@ export function MenuCard({
           </div>
         ) : null}
         {onAdd ? (
-          <button
-            type="button"
-            disabled={!orderableToday || missingRequired}
-            onClick={() => onAdd(item, selectedOptionIds, selectedOptionLabels)}
-            className={`focus-ring mt-auto w-full rounded-full px-4 py-3 text-center text-sm font-semibold text-cream transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-date/30 ${
-              quantity > 0 ? "bg-mint" : "bg-date"
-            }`}
-          >
-            {!orderableToday ? unavailableMessage : missingRequired ? "Choose options first" : quantity > 0 ? `Added x${quantity}` : "Add to basket"}
-          </button>
+          <div className="mt-auto space-y-3 pt-4">
+            <label className="block text-xs font-bold uppercase tracking-[0.12em] text-date/45">
+              Notes
+              <textarea
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="Any notes for the kitchen?"
+                className="focus-ring mt-2 min-h-20 w-full resize-y rounded-md border border-date/10 bg-cream/60 px-3 py-2 text-sm font-normal normal-case tracking-normal text-date placeholder:text-date/40"
+              />
+            </label>
+            <button
+              type="button"
+              disabled={!orderableToday || missingRequired}
+              onClick={() => onAdd(item, selectedOptionIds, selectedOptionLabels, notes.trim())}
+              className={`focus-ring w-full rounded-full px-4 py-3 text-center text-sm font-semibold text-cream transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-date/30 ${
+                quantity > 0 ? "bg-mint" : "bg-date"
+              }`}
+            >
+              {!orderableToday ? unavailableMessage : missingRequired ? "Choose options first" : quantity > 0 ? `Added x${quantity}` : "Add to basket"}
+            </button>
+          </div>
         ) : (
           <Link
             href="/order"

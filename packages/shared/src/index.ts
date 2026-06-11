@@ -370,7 +370,10 @@ export const menuItems: (MenuItem & { sortOrder?: number })[] = [
   sabaMenuItem("malawax", "breakfast", "Malawax", 100, "(a thin fragrant crepe)", 2),
   sabaMenuItem("muufo", "breakfast", "Muufo", 200, "(a traditional flatbread)", 3),
   sabaMenuItem("3-bajiyo", "breakfast", "3 Bajiyo", 100, "(black-eye peas served with green chili sauce)", 4),
-  sabaMenuItem("chapati-sabayad", "breakfast", "Chapati / Sabayad", 200, "(unleavened flatbread)", 5),
+  sabaMenuItem("chapati-sabayad", "breakfast", "Chapati / Sabayad", 200, "(unleavened flatbread)", 5, [
+    choice("Choice", "Chapati"),
+    choice("Choice", "Sabayad")
+  ]),
   sabaMenuItem("liver-kidney-only", "breakfast", "Liver / Kidney Only", 500, "(Pan fried liver or kidney with onions and spices)", 6, [
     choice("Main choice", "Liver"),
     choice("Main choice", "Kidney")

@@ -146,12 +146,13 @@ export function OrderFlow() {
     return () => window.clearTimeout(timeout);
   }, [cartPulse]);
 
-  function addItem(item: MenuItem, optionIds: string[] = [], optionLabels: string[] = []) {
+  function addItem(item: MenuItem, optionIds: string[] = [], optionLabels: string[] = [], notes = "") {
     setLastAdded(item.name);
     setCartPulse(true);
     setCart((current) => {
       const optionKey = optionIds.slice().sort().join("|");
-      const existing = current.find((line) => line.menuItemId === item.id && line.optionIds.slice().sort().join("|") === optionKey && !line.addOnIds.length);
+      const cleanNotes = notes.trim();
+      const existing = current.find((line) => line.menuItemId === item.id && line.optionIds.slice().sort().join("|") === optionKey && (line.notes ?? "") === cleanNotes && !line.addOnIds.length);
       if (existing) {
         return current.map((line) => (line === existing ? { ...line, quantity: line.quantity + 1 } : line));
       }
@@ -165,7 +166,7 @@ export function OrderFlow() {
           optionIds,
           optionLabels,
           addOnIds: [],
-          notes: ""
+          notes: cleanNotes
         }
       ];
     });
