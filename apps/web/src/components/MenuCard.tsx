@@ -83,7 +83,10 @@ export function MenuCard({
     .filter((option): option is MenuItemOption => Boolean(option));
   const selectedOptionIds = platterConfig ? buildOptionIds(item, platterQuantities) : chosenOptions.map((option) => option.id);
   const selectedOptionLabels = platterConfig ? buildOptionLabels(item, platterQuantities) : chosenOptions.map(optionLabel);
-  const priceDelta = chosenOptions.reduce((sum, option) => sum + option.priceDeltaPence, 0);
+  const platterChosenOptions = platterConfig
+    ? selectedOptionIds.map((optionId) => item.options.find((option) => option.id === optionId)).filter((option): option is MenuItemOption => Boolean(option))
+    : [];
+  const priceDelta = (platterConfig ? platterChosenOptions : chosenOptions).reduce((sum, option) => sum + option.priceDeltaPence, 0);
   const displayPrice = item.pricePence + priceDelta;
   const mainTotal = item.options.filter((option) => optionGroup(option) === "Main Meat").reduce((sum, option) => sum + (platterQuantities[option.id] ?? 0), 0);
   const extraTotal = item.options.filter((option) => optionGroup(option) === "Extra Meat").reduce((sum, option) => sum + (platterQuantities[option.id] ?? 0), 0);

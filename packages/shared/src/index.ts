@@ -475,8 +475,8 @@ export const menuItems: (MenuItem & { sortOrder?: number })[] = [
     choice("Flavour", "Lotus")
   ]),
   sabaMenuItem("cambuulo", "sides-desserts", "Cambuulo", 400, "(slow-cooked adzuki beans with/or wheat berries or corn)", 49),
-  sabaMenuItem("saba-special-plateau", "special-plateau", "Saba Special Plateau (serves 2-3)", 4299, "Choose 1 main meat, 1 extra meat, and 3 Rice/Pasta side portions.", 50, [
-    choice("Main Meat", "Lamb Shank"),
+  sabaMenuItem("saba-special-plateau", "special-plateau", "Saba Special Plateau (serves 2-3)", 3999, "Choose 1 main meat, 1 extra meat, and 3 Rice/Pasta side portions.", 50, [
+    choice("Main Meat", "Lamb Shank", 300),
     choice("Main Meat", "Saba Lamb"),
     choice("Extra Meat", "Salmon"),
     choice("Extra Meat", "Beef Steak"),
@@ -488,8 +488,8 @@ export const menuItems: (MenuItem & { sortOrder?: number })[] = [
     choice("Sides", "Rice"),
     choice("Sides", "Pasta")
   ]),
-  sabaMenuItem("bigger-plateau", "special-plateau", "Bigger Plateau (serves 4-5)", 7299, "Choose 2 main meat portions, 3 extra meat portions, and 5 Rice/Pasta side portions.", 51, [
-    choice("Main Meat", "Lamb Shank"),
+  sabaMenuItem("bigger-plateau", "special-plateau", "Bigger Plateau (serves 4-5)", 6499, "Choose 2 main meat portions, 3 extra meat portions, and 5 Rice/Pasta side portions.", 51, [
+    choice("Main Meat", "Lamb Shank", 400),
     choice("Main Meat", "Saba Lamb"),
     choice("Extra Meat", "Salmon"),
     choice("Extra Meat", "Beef Steak"),

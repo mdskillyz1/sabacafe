@@ -172,6 +172,14 @@ export function OrderFlow() {
     });
   }
 
+  function lineUnitPrice(line: CartLine) {
+    const item = items.find((candidate) => candidate.id === line.menuItemId);
+    const optionDelta = line.optionIds.reduce((sum, optionId) => {
+      return sum + (item?.options.find((option) => option.id === optionId)?.priceDeltaPence ?? 0);
+    }, 0);
+    return line.unitPricePence + optionDelta;
+  }
+
   function scrollToBasket() {
     basketRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -428,7 +436,7 @@ export function OrderFlow() {
                   <div className="flex justify-between gap-3">
                     <div>
                       <p className="font-semibold text-date">{line.name}</p>
-                      <p className="text-sm text-date/60">{money(line.unitPricePence)} each</p>
+                      <p className="text-sm text-date/60">{money(lineUnitPrice(line))} each</p>
                       {line.optionLabels?.length ? (
                         <ul className="mt-2 space-y-1 text-xs font-semibold text-clay">
                           {line.optionLabels.map((label) => (
