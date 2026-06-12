@@ -88,7 +88,7 @@ function validatePlatter(itemId: string, itemName: string, selectedOptions: Menu
 
   if (itemId === "saba-special-plateau") {
     if (mainTotal !== 1) throw new Error(`Please choose 1 main meat for ${itemName}.`);
-    if (extraTotal !== 1) throw new Error(`Please choose 1 extra meat for ${itemName}.`);
+    if (extraTotal !== 2) throw new Error(`Please choose 2 extra meats for ${itemName}.`);
     if (sideTotal !== 3) throw new Error(`Please choose exactly 3 Rice/Pasta side portions for ${itemName}.`);
   }
 

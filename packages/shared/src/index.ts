@@ -475,7 +475,7 @@ export const menuItems: (MenuItem & { sortOrder?: number })[] = [
     choice("Flavour", "Lotus")
   ]),
   sabaMenuItem("cambuulo", "sides-desserts", "Cambuulo", 400, "(slow-cooked adzuki beans with/or wheat berries or corn)", 49),
-  sabaMenuItem("saba-special-plateau", "special-plateau", "Saba Special Plateau (serves 2-3)", 3999, "Choose 1 main meat, 1 extra meat, and 3 Rice/Pasta side portions.", 50, [
+  sabaMenuItem("saba-special-plateau", "special-plateau", "Saba Special Plateau (serves 2-3)", 3999, "Choose 1 main meat, 2 extra meats, and 3 Rice/Pasta side portions.", 50, [
     choice("Main Meat", "Lamb Shank", 300),
     choice("Main Meat", "Saba Lamb"),
     choice("Extra Meat", "Salmon"),

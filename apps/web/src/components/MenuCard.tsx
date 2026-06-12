@@ -9,7 +9,7 @@ import { itemAvailabilityMessage, isItemOrderableToday, money, optionDisplayName
 const platterConfigs = {
   "saba-special-plateau": {
     mainRequired: 1,
-    extraRequired: 1,
+    extraRequired: 2,
     sideRequired: 3
   },
   "bigger-plateau": {
@@ -132,7 +132,7 @@ export function MenuCard({
             <h3 className="break-words font-display text-xl font-semibold leading-tight text-date sm:text-2xl">{item.name}</h3>
             <p className="mt-2 text-sm leading-6 text-date/70">{item.description}</p>
           </div>
-          <p className="shrink-0 font-semibold text-clay">{groups.length && !onAdd ? `From ${money(item.pricePence)}` : money(displayPrice)}</p>
+          <p className="shrink-0 font-semibold text-clay">{money(displayPrice)}</p>
         </div>
         {platterConfig && onAdd ? (
           <div className="mt-4 space-y-4 rounded-md border border-date/10 bg-cream/70 p-3">
@@ -179,39 +179,21 @@ export function MenuCard({
               <legend className="text-xs font-bold uppercase tracking-[0.12em] text-clay">
                 Extra Meat {extraTotal}/{platterConfig.extraRequired}
               </legend>
-              {item.id === "saba-special-plateau" ? (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {groupedOptions.extra.map((option) => {
-                    const active = (platterQuantities[option.id] ?? 0) > 0;
-                    return (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => singleChoice(option.id, groupedOptions.extra.map((candidate) => candidate.id))}
-                        className={`focus-ring min-h-10 rounded-full border px-3 py-2 text-sm font-semibold transition ${active ? "border-mint bg-mint text-white" : "border-date/10 bg-white text-date"}`}
-                      >
-                        {optionDisplayName(option)}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="mt-2 grid gap-2">
-                  {groupedOptions.extra.map((option) => {
-                    const value = platterQuantities[option.id] ?? 0;
-                    return (
-                      <CounterButton
-                        key={option.id}
-                        label={optionDisplayName(option)}
-                        value={value}
-                        disablePlus={extraTotal >= platterConfig.extraRequired}
-                        onMinus={() => setPlatterCount(option.id, value - 1)}
-                        onPlus={() => setPlatterCount(option.id, value + 1)}
-                      />
-                    );
-                  })}
-                </div>
-              )}
+              <div className="mt-2 grid gap-2">
+                {groupedOptions.extra.map((option) => {
+                  const value = platterQuantities[option.id] ?? 0;
+                  return (
+                    <CounterButton
+                      key={option.id}
+                      label={optionDisplayName(option)}
+                      value={value}
+                      disablePlus={extraTotal >= platterConfig.extraRequired}
+                      onMinus={() => setPlatterCount(option.id, value - 1)}
+                      onPlus={() => setPlatterCount(option.id, value + 1)}
+                    />
+                  );
+                })}
+              </div>
             </fieldset>
 
             <fieldset>
@@ -268,7 +250,6 @@ export function MenuCard({
                           }`}
                         >
                           {optionDisplayName(option)}
-                          {option.priceDeltaPence ? <span className="ml-1 opacity-80">+{money(option.priceDeltaPence)}</span> : null}
                         </button>
                       );
                     })}
