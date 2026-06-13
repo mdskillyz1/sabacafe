@@ -14,7 +14,7 @@ function base64UrlToBytes(value: string) {
 
 type AdminSession = {
   exp?: number;
-  role?: "SUPER_ADMIN" | "STAFF";
+  role?: "SUPER_ADMIN" | "MANAGER" | "STAFF" | "KITCHEN";
 };
 
 const ownerOnlyPaths = [
@@ -32,8 +32,58 @@ const ownerOnlyPaths = [
   "/api/admin/legal-content"
 ];
 
+const managerAllowedPaths = [
+  "/admin",
+  "/admin/tables",
+  "/admin/orders",
+  "/admin/kitchen",
+  "/admin/bookings",
+  "/admin/reviews",
+  "/api/admin/me",
+  "/api/admin/tables",
+  "/api/admin/orders",
+  "/api/admin/orders/",
+  "/api/admin/staff-orders",
+  "/api/admin/staff-orders/",
+  "/api/admin/bookings",
+  "/api/admin/bookings/",
+  "/api/menu"
+];
+
+const staffAllowedPaths = [
+  "/admin",
+  "/admin/tables",
+  "/api/admin/me",
+  "/api/admin/tables",
+  "/api/admin/orders",
+  "/api/admin/orders/",
+  "/api/admin/staff-orders",
+  "/api/admin/staff-orders/",
+  "/api/menu"
+];
+
+const kitchenAllowedPaths = [
+  "/admin",
+  "/admin/kitchen",
+  "/api/admin/me",
+  "/api/admin/orders",
+  "/api/admin/orders/"
+];
+
 function isOwnerOnlyPath(pathname: string) {
   return ownerOnlyPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
+
+function isKitchenAllowedPath(pathname: string) {
+  return kitchenAllowedPaths.some((path) => pathname === path || pathname.startsWith(path));
+}
+
+function isManagerAllowedPath(pathname: string) {
+  return managerAllowedPaths.some((path) => pathname === path || pathname.startsWith(path));
+}
+
+function isStaffAllowedPath(pathname: string) {
+  return staffAllowedPaths.some((path) => pathname === path || pathname.startsWith(path));
 }
 
 async function verifySessionCookie(cookie?: string): Promise<AdminSession | null> {
@@ -65,15 +115,47 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isAdminPage = pathname.startsWith("/admin");
   const isAdminApi = pathname.startsWith("/api/admin");
+  const isInvite = pathname === "/admin/invite";
   const isLogin = pathname === "/admin/login" || pathname === "/api/admin/login";
 
-  if ((!isAdminPage && !isAdminApi) || isLogin) {
+  if ((!isAdminPage && !isAdminApi) || isLogin || isInvite) {
     return NextResponse.next();
   }
 
   const cookie = request.cookies.get(adminCookieName)?.value;
   const session = await verifySessionCookie(cookie);
   if (session) {
+    if (session.role === "STAFF" && pathname === "/admin") {
+      const staffUrl = request.nextUrl.clone();
+      staffUrl.pathname = "/admin/tables";
+      return NextResponse.redirect(staffUrl);
+    }
+    if (session.role === "KITCHEN" && pathname === "/admin") {
+      const kitchenUrl = request.nextUrl.clone();
+      kitchenUrl.pathname = "/admin/kitchen";
+      return NextResponse.redirect(kitchenUrl);
+    }
+    if (session.role === "STAFF" && !isStaffAllowedPath(pathname)) {
+      if (isAdminApi) return NextResponse.json({ error: "Staff table-ordering access only." }, { status: 403 });
+      const staffUrl = request.nextUrl.clone();
+      staffUrl.pathname = "/admin/tables";
+      staffUrl.searchParams.set("access", "restricted");
+      return NextResponse.redirect(staffUrl);
+    }
+    if (session.role === "MANAGER" && !isManagerAllowedPath(pathname)) {
+      if (isAdminApi) return NextResponse.json({ error: "Manager day-to-day operations access only." }, { status: 403 });
+      const managerUrl = request.nextUrl.clone();
+      managerUrl.pathname = "/admin";
+      managerUrl.searchParams.set("access", "restricted");
+      return NextResponse.redirect(managerUrl);
+    }
+    if (session.role === "KITCHEN" && !isKitchenAllowedPath(pathname)) {
+      if (isAdminApi) return NextResponse.json({ error: "Kitchen access only." }, { status: 403 });
+      const kitchenUrl = request.nextUrl.clone();
+      kitchenUrl.pathname = "/admin/kitchen";
+      kitchenUrl.searchParams.set("access", "restricted");
+      return NextResponse.redirect(kitchenUrl);
+    }
     if (session.role !== "SUPER_ADMIN" && isOwnerOnlyPath(pathname)) {
       if (isAdminApi) {
         return NextResponse.json({ error: "Owner access required." }, { status: 403 });

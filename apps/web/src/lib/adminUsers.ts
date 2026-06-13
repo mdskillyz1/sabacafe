@@ -1,20 +1,25 @@
 import { constants as fsConstants, promises as fs } from "node:fs";
 import path from "node:path";
-import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { prisma } from "@saba/database";
 import bundledAdminUsers from "../../data/admin-users.json";
 
 const scrypt = promisify(scryptCallback);
 
-export type AdminRole = "SUPER_ADMIN" | "STAFF";
+export type AdminRole = "SUPER_ADMIN" | "MANAGER" | "STAFF" | "KITCHEN";
 
 export type AdminUserRecord = {
   id: string;
   username: string;
+  fullName?: string;
+  email?: string;
   passwordHash: string;
   role: AdminRole;
   isActive: boolean;
+  inviteTokenHash?: string;
+  inviteExpiresAt?: string;
+  inviteAcceptedAt?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -24,7 +29,7 @@ type AdminUserStore = {
   updatedAt: string;
 };
 
-export type PublicAdminUser = Omit<AdminUserRecord, "passwordHash">;
+export type PublicAdminUser = Omit<AdminUserRecord, "passwordHash" | "inviteTokenHash">;
 
 const adminUsersFileName = "admin-users.json";
 const db = prisma as any;
@@ -71,23 +76,65 @@ function normalizeUsername(username: string) {
 }
 
 function publicUser(user: AdminUserRecord): PublicAdminUser {
-  const { passwordHash: _passwordHash, ...safeUser } = user;
+  const { passwordHash: _passwordHash, inviteTokenHash: _inviteTokenHash, ...safeUser } = user;
   return safeUser;
+}
+
+function normalizeRole(role?: string): AdminRole {
+  if (role === "SUPER_ADMIN" || role === "MANAGER" || role === "KITCHEN") return role;
+  return "STAFF";
+}
+
+function normalizeEmail(email?: string) {
+  return String(email ?? "").trim().toLowerCase();
+}
+
+function tokenHash(token: string) {
+  return createHash("sha256").update(token).digest("hex");
 }
 
 function dbUserToRecord(user: any): AdminUserRecord {
   return {
     id: user.id,
     username: normalizeUsername(user.username),
+    fullName: user.fullName ?? undefined,
+    email: user.email ?? undefined,
     passwordHash: user.passwordHash,
-    role: user.role === "SUPER_ADMIN" ? "SUPER_ADMIN" : "STAFF",
+    role: normalizeRole(user.role),
     isActive: user.isActive !== false,
+    inviteTokenHash: user.inviteTokenHash ?? undefined,
+    inviteExpiresAt: user.inviteExpiresAt instanceof Date ? user.inviteExpiresAt.toISOString() : user.inviteExpiresAt ?? undefined,
+    inviteAcceptedAt: user.inviteAcceptedAt instanceof Date ? user.inviteAcceptedAt.toISOString() : user.inviteAcceptedAt ?? undefined,
     createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt ?? now(),
     updatedAt: user.updatedAt instanceof Date ? user.updatedAt.toISOString() : user.updatedAt ?? now()
   };
 }
 
+async function addEnumValue(typeName: string, value: string) {
+  await db.$executeRawUnsafe(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM pg_type WHERE typname = '${typeName}') THEN
+        ALTER TYPE "${typeName}" ADD VALUE IF NOT EXISTS '${value}';
+      END IF;
+    END $$;
+  `);
+}
+
+async function ensureAdminUserSchema() {
+  await addEnumValue("AdminRole", "MANAGER");
+  await addEnumValue("AdminRole", "KITCHEN");
+  await db.$executeRawUnsafe(`ALTER TABLE "AdminUser" ADD COLUMN IF NOT EXISTS "fullName" TEXT;`);
+  await db.$executeRawUnsafe(`ALTER TABLE "AdminUser" ADD COLUMN IF NOT EXISTS "email" TEXT;`);
+  await db.$executeRawUnsafe(`ALTER TABLE "AdminUser" ADD COLUMN IF NOT EXISTS "inviteTokenHash" TEXT;`);
+  await db.$executeRawUnsafe(`ALTER TABLE "AdminUser" ADD COLUMN IF NOT EXISTS "inviteExpiresAt" TIMESTAMP(3);`);
+  await db.$executeRawUnsafe(`ALTER TABLE "AdminUser" ADD COLUMN IF NOT EXISTS "inviteAcceptedAt" TIMESTAMP(3);`);
+  await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "AdminUser_email_key" ON "AdminUser"("email") WHERE "email" IS NOT NULL;`);
+  await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "AdminUser_inviteTokenHash_idx" ON "AdminUser"("inviteTokenHash");`);
+}
+
 async function ensureDefaultDbAdminUsers() {
+  await ensureAdminUserSchema();
   const defaults = defaultAdminUsers();
   await db.adminUser.updateMany({
     where: { username: "admin" },
@@ -156,9 +203,14 @@ function normalizeStore(input: Partial<AdminUserStore>): AdminUserStore {
     .map((user) => ({
       id: user.id,
       username: normalizeUsername(user.username),
+      fullName: user.fullName,
+      email: user.email,
       passwordHash: user.passwordHash,
-      role: user.role === "STAFF" ? ("STAFF" as const) : ("SUPER_ADMIN" as const),
+      role: normalizeRole(user.role),
       isActive: user.isActive !== false,
+      inviteTokenHash: user.inviteTokenHash,
+      inviteExpiresAt: user.inviteExpiresAt,
+      inviteAcceptedAt: user.inviteAcceptedAt,
       createdAt: user.createdAt ?? now(),
       updatedAt: user.updatedAt ?? now()
     }))
@@ -247,29 +299,40 @@ export async function findAdminUserById(id: string) {
   return user ? publicUser(user) : null;
 }
 
-export function validateAdminUserInput(input: { username?: string; password?: string; role?: string }) {
+export function validateAdminUserInput(input: { username?: string; password?: string; role?: string; fullName?: string; email?: string }, options: { passwordRequired?: boolean } = {}) {
   const errors: Record<string, string> = {};
   const username = normalizeUsername(input.username ?? "");
   if (input.username !== undefined && !/^[a-z0-9._-]{3,32}$/.test(username)) {
     errors.username = "Username must be 3-32 characters using letters, numbers, dots, dashes, or underscores.";
   }
-  if (input.password !== undefined && input.password.length < 8) {
+  if ((options.passwordRequired || input.password !== undefined) && String(input.password ?? "").length < 8) {
     errors.password = "Password must be at least 8 characters.";
   }
-  if (input.role && input.role !== "SUPER_ADMIN" && input.role !== "STAFF") {
-    errors.role = "Choose Owner or Shop.";
+  if (input.role && !["SUPER_ADMIN", "MANAGER", "STAFF", "KITCHEN"].includes(input.role)) {
+    errors.role = "Choose Owner, Manager, Staff, or Kitchen.";
+  }
+  if (input.email !== undefined && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(input.email))) {
+    errors.email = "Enter a valid email address.";
+  }
+  if (input.fullName !== undefined && input.fullName.trim().length < 2) {
+    errors.fullName = "Enter the staff member's full name.";
   }
   return errors;
 }
 
-export async function createAdminUser(input: { username: string; password: string; role: AdminRole }) {
-  const errors = validateAdminUserInput(input);
+export async function createAdminUser(input: { username: string; password?: string; role: AdminRole; fullName?: string; email?: string }) {
+  const password = input.password || randomBytes(18).toString("base64url");
+  const errors = validateAdminUserInput({ ...input, password }, { passwordRequired: true });
   if (Object.keys(errors).length) return { ok: false as const, errors };
 
   const store = await readAdminUserStore();
   const username = normalizeUsername(input.username);
+  const email = normalizeEmail(input.email);
   if (store.users.some((user) => user.username === username)) {
     return { ok: false as const, errors: { username: "That username already exists." } };
+  }
+  if (email && store.users.some((user) => normalizeEmail(user.email) === email)) {
+    return { ok: false as const, errors: { email: "That email already exists." } };
   }
 
   if (databaseAdminUsersEnabled()) {
@@ -277,7 +340,9 @@ export async function createAdminUser(input: { username: string; password: strin
       await db.adminUser.create({
         data: {
           username,
-          passwordHash: await hashPassword(input.password),
+          fullName: input.fullName?.trim() || null,
+          email: email || null,
+          passwordHash: await hashPassword(password),
           role: input.role,
           isActive: true
         }
@@ -293,7 +358,9 @@ export async function createAdminUser(input: { username: string; password: strin
   const nextUser: AdminUserRecord = {
     id: `admin-${randomBytes(10).toString("hex")}`,
     username,
-    passwordHash: await hashPassword(input.password),
+    fullName: input.fullName?.trim(),
+    email: email || undefined,
+    passwordHash: await hashPassword(password),
     role: input.role,
     isActive: true,
     createdAt: timestamp,
@@ -305,7 +372,7 @@ export async function createAdminUser(input: { username: string; password: strin
 
 export async function updateAdminUser(
   id: string,
-  input: { username?: string; password?: string; role?: AdminRole; isActive?: boolean }
+  input: { username?: string; password?: string; role?: AdminRole; isActive?: boolean; fullName?: string; email?: string }
 ) {
   const errors = validateAdminUserInput(input);
   if (Object.keys(errors).length) return { ok: false as const, errors };
@@ -317,8 +384,12 @@ export async function updateAdminUser(
   const nextUsers = [...store.users];
   const current = nextUsers[index];
   const username = input.username ? normalizeUsername(input.username) : current.username;
+  const email = input.email !== undefined ? normalizeEmail(input.email) : normalizeEmail(current.email);
   if (nextUsers.some((user) => user.id !== id && user.username === username)) {
     return { ok: false as const, errors: { username: "That username already exists." } };
+  }
+  if (email && nextUsers.some((user) => user.id !== id && normalizeEmail(user.email) === email)) {
+    return { ok: false as const, errors: { email: "That email already exists." } };
   }
 
   if (databaseAdminUsersEnabled()) {
@@ -327,6 +398,8 @@ export async function updateAdminUser(
         where: { id },
         data: {
           username,
+          fullName: input.fullName ?? current.fullName ?? null,
+          email: email || null,
           role: input.role ?? current.role,
           isActive: input.isActive ?? current.isActive,
           ...(input.password ? { passwordHash: await hashPassword(input.password) } : {})
@@ -342,6 +415,8 @@ export async function updateAdminUser(
   nextUsers[index] = {
     ...current,
     username,
+    fullName: input.fullName ?? current.fullName,
+    email: email || undefined,
     role: input.role ?? current.role,
     isActive: input.isActive ?? current.isActive,
     passwordHash: input.password ? await hashPassword(input.password) : current.passwordHash,
@@ -372,4 +447,129 @@ export async function deleteAdminUser(id: string) {
 
   const nextStore = await writeAdminUserStore({ ...store, users: store.users.filter((candidate) => candidate.id !== id) });
   return { ok: true as const, users: nextStore.users.map(publicUser) };
+}
+
+export async function createStaffInvite(input: { fullName: string; email: string; role: AdminRole; origin: string }) {
+  const baseUsername = normalizeUsername(input.email.split("@")[0].replace(/[^a-z0-9._-]/gi, "-")).slice(0, 24);
+  const username = baseUsername.length >= 3 ? baseUsername : `staff-${randomBytes(3).toString("hex")}`;
+  const token = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 48);
+  const errors = validateAdminUserInput({ username, fullName: input.fullName, email: input.email, role: input.role, password: "temporary-pass" }, { passwordRequired: true });
+  if (Object.keys(errors).length) return { ok: false as const, errors };
+  if (input.role === "SUPER_ADMIN") return { ok: false as const, errors: { role: "Create Owner accounts with a password, not an email invite." } };
+
+  const store = await readAdminUserStore();
+  const email = normalizeEmail(input.email);
+  if (store.users.some((user) => normalizeEmail(user.email) === email || user.username === username)) {
+    return { ok: false as const, errors: { email: "That staff member already exists." } };
+  }
+
+  const passwordHash = await hashPassword(randomBytes(24).toString("base64url"));
+  if (databaseAdminUsersEnabled()) {
+    try {
+      await ensureAdminUserSchema();
+      await db.adminUser.create({
+        data: {
+          username,
+          fullName: input.fullName.trim(),
+          email,
+          passwordHash,
+          role: input.role,
+          isActive: false,
+          inviteTokenHash: tokenHash(token),
+          inviteExpiresAt: expiresAt
+        }
+      });
+    } catch (error) {
+      console.error("Database staff invite failed.", error);
+      return { ok: false as const, errors: { user: "Could not create staff invite. Check the database connection." } };
+    }
+  } else {
+    const timestamp = now();
+    await writeAdminUserStore({
+      ...store,
+      users: [
+        ...store.users,
+        {
+          id: `admin-${randomBytes(10).toString("hex")}`,
+          username,
+          fullName: input.fullName.trim(),
+          email,
+          passwordHash,
+          role: input.role,
+          isActive: false,
+          inviteTokenHash: tokenHash(token),
+          inviteExpiresAt: expiresAt.toISOString(),
+          createdAt: timestamp,
+          updatedAt: timestamp
+        }
+      ]
+    });
+  }
+
+  const inviteUrl = `${input.origin}/admin/invite?token=${encodeURIComponent(token)}`;
+  await sendStaffInviteEmail({ to: email, fullName: input.fullName, inviteUrl });
+  return { ok: true as const, users: await listAdminUsers(), inviteUrl, expiresAt: expiresAt.toISOString() };
+}
+
+export async function acceptStaffInvite(input: { token: string; password: string }) {
+  if (input.password.length < 8) return { ok: false as const, errors: { password: "Password must be at least 8 characters." } };
+  const hash = tokenHash(input.token);
+  if (databaseAdminUsersEnabled()) {
+    try {
+      await ensureAdminUserSchema();
+      const users = (await db.adminUser.findMany({ where: { inviteTokenHash: hash }, take: 1 })) as any[];
+      const user = users[0] ? dbUserToRecord(users[0]) : null;
+      if (!user || !user.inviteExpiresAt || new Date(user.inviteExpiresAt).getTime() < Date.now()) {
+        return { ok: false as const, errors: { token: "This invite link has expired or is invalid." } };
+      }
+      await db.adminUser.update({
+        where: { id: user.id },
+        data: {
+          passwordHash: await hashPassword(input.password),
+          isActive: true,
+          inviteTokenHash: null,
+          inviteAcceptedAt: new Date()
+        }
+      });
+      return { ok: true as const };
+    } catch (error) {
+      console.error("Accept staff invite failed.", error);
+      return { ok: false as const, errors: { token: "Invite could not be accepted." } };
+    }
+  }
+
+  const store = await readAdminUserStore();
+  const user = store.users.find((candidate) => candidate.inviteTokenHash === hash);
+  if (!user || !user.inviteExpiresAt || new Date(user.inviteExpiresAt).getTime() < Date.now()) {
+    return { ok: false as const, errors: { token: "This invite link has expired or is invalid." } };
+  }
+  const acceptedPasswordHash = await hashPassword(input.password);
+  const nextUsers = store.users.map((candidate) =>
+    candidate.id === user.id
+      ? { ...candidate, passwordHash: acceptedPasswordHash, isActive: true, inviteTokenHash: undefined, inviteAcceptedAt: now(), updatedAt: now() }
+      : candidate
+  );
+  await writeAdminUserStore({ ...store, users: nextUsers });
+  return { ok: true as const };
+}
+
+async function sendStaffInviteEmail(input: { to: string; fullName: string; inviteUrl: string }) {
+  if (!process.env.RESEND_API_KEY) {
+    console.info(`Staff invite for ${input.to}: ${input.inviteUrl}`);
+    return;
+  }
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      from: process.env.STAFF_INVITE_FROM_EMAIL || "Saba Cafe <hello@sabacafe.co.uk>",
+      to: input.to,
+      subject: "Create your Saba Cafe staff account",
+      html: `<p>Hello ${input.fullName},</p><p>You have been invited to create a Saba Cafe staff account.</p><p><a href="${input.inviteUrl}">Create your password</a></p><p>This link expires in 48 hours.</p>`
+    })
+  }).catch((error) => console.error("Staff invite email failed.", error));
 }

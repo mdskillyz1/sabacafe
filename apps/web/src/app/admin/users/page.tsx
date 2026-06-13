@@ -4,10 +4,10 @@ import { AdminPageShell } from "../AdminPageShell";
 export default function AdminUsersPage() {
   return (
     <AdminPageShell
-      eyebrow="Admin users"
-      title="Manage staff access."
-      description="Owner accounts can create shop accounts, reset passwords, disable access, and control roles."
-      breadcrumbs={[{ label: "Admin Users" }]}
+      eyebrow="Staff management"
+      title="Invite and manage staff."
+      description="Owners can invite staff by email, assign roles, disable accounts, reset passwords, and review access for restaurant operations."
+      breadcrumbs={[{ label: "Staff" }]}
       backLabel="Back to overview"
     >
       <AdminUsersManager />

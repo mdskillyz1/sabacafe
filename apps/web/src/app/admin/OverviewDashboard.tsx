@@ -23,7 +23,7 @@ import { AdminLogoutButton } from "./AdminLogoutButton";
 type Analytics = any;
 type CurrentAdmin = {
   username: string;
-  role: "SUPER_ADMIN" | "STAFF";
+  role: "SUPER_ADMIN" | "MANAGER" | "STAFF" | "KITCHEN";
   label: string;
 };
 
@@ -49,13 +49,14 @@ const kpiLinks = [
 ];
 const adminLinks = [
   { label: "Menu", href: "/admin/menu", ownerOnly: true },
+  { label: "Tables", href: "/admin/tables", ownerOnly: false, roles: ["SUPER_ADMIN", "MANAGER", "STAFF"] },
   { label: "Orders", href: "/admin/orders", ownerOnly: false },
   { label: "Kitchen", href: "/admin/kitchen", ownerOnly: false },
   { label: "Bookings", href: "/admin/bookings", ownerOnly: false },
   { label: "Reviews", href: "/admin/reviews", ownerOnly: false },
   { label: "Delivery", href: "/admin/settings", ownerOnly: true },
   { label: "Website", href: "/admin/website-settings", ownerOnly: true },
-  { label: "Admin users", href: "/admin/users", ownerOnly: true }
+  { label: "Staff", href: "/admin/users", ownerOnly: true }
 ];
 
 function EmptyState({ message }: { message: string }) {
@@ -191,7 +192,12 @@ export function OverviewDashboard() {
       .catch(() => setCurrentAdmin(null));
   }, []);
 
-  const visibleAdminLinks = adminLinks.filter((link) => currentAdmin?.role === "SUPER_ADMIN" || !link.ownerOnly);
+  const visibleAdminLinks = adminLinks.filter((link) => {
+    if (currentAdmin?.role !== "SUPER_ADMIN" && link.ownerOnly) return false;
+    if ("roles" in link && link.roles && currentAdmin?.role && !link.roles.includes(currentAdmin.role)) return false;
+    if (currentAdmin?.role === "KITCHEN" && !["Kitchen", "Orders"].includes(link.label)) return false;
+    return true;
+  });
 
   const kpis = analytics
     ? [

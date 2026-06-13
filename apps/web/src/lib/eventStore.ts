@@ -19,6 +19,17 @@ export type WebsiteEventType =
 
 export type AdminActivityType =
   | "admin_login"
+  | "staff_invited"
+  | "staff_updated"
+  | "staff_disabled"
+  | "order_created"
+  | "order_item_added"
+  | "order_item_removed"
+  | "order_amended"
+  | "order_sent_to_kitchen"
+  | "order_cancelled"
+  | "order_marked_paid"
+  | "table_cleared"
   | "order_status_update"
   | "booking_status_update"
   | "menu_update"
@@ -41,6 +52,7 @@ export type AdminActivityLog = {
   username?: string;
   role?: string;
   entityId?: string;
+  metadata?: Record<string, unknown>;
   createdAt: string;
 };
 
@@ -61,6 +73,17 @@ const eventTypes = new Set<WebsiteEventType>([
 
 const adminActivityTypes = new Set<AdminActivityType>([
   "admin_login",
+  "staff_invited",
+  "staff_updated",
+  "staff_disabled",
+  "order_created",
+  "order_item_added",
+  "order_item_removed",
+  "order_amended",
+  "order_sent_to_kitchen",
+  "order_cancelled",
+  "order_marked_paid",
+  "table_cleared",
   "order_status_update",
   "booking_status_update",
   "menu_update",
@@ -137,7 +160,7 @@ async function ensureEventSchema() {
         CREATE TYPE "WebsiteEventType" AS ENUM ('page_view', 'menu_view', 'add_to_cart', 'checkout_start', 'booking_form_view', 'booking_submit', 'order_complete');
       END IF;
       IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'AdminActivityType') THEN
-        CREATE TYPE "AdminActivityType" AS ENUM ('admin_login', 'order_status_update', 'booking_status_update', 'menu_update', 'review_moderation', 'settings_update');
+        CREATE TYPE "AdminActivityType" AS ENUM ('admin_login', 'staff_invited', 'staff_updated', 'staff_disabled', 'order_created', 'order_item_added', 'order_item_removed', 'order_amended', 'order_sent_to_kitchen', 'order_cancelled', 'order_marked_paid', 'table_cleared', 'order_status_update', 'booking_status_update', 'menu_update', 'review_moderation', 'settings_update');
       END IF;
     END $$;
   `);
@@ -226,7 +249,7 @@ export async function trackWebsiteEvent(input: { type: string; path?: string; se
 export async function readAdminActivity() {
   try {
     await ensureEventSchema();
-    const rows = (await db.$queryRawUnsafe(`SELECT "id", "type", "message", "adminId", "username", "role", "entityId", "createdAt" FROM "AdminActivityLog" ORDER BY "createdAt" DESC LIMIT 2000`)) as any[];
+    const rows = (await db.$queryRawUnsafe(`SELECT "id", "type", "message", "adminId", "username", "role", "entityId", "metadata", "createdAt" FROM "AdminActivityLog" ORDER BY "createdAt" DESC LIMIT 2000`)) as any[];
     return {
       events: rows.map((row) => ({
         id: row.id,
@@ -236,6 +259,7 @@ export async function readAdminActivity() {
         username: row.username ?? undefined,
         role: row.role ?? undefined,
         entityId: row.entityId ?? undefined,
+        metadata: row.metadata ?? undefined,
         createdAt: dateToIso(row.createdAt)
       })),
       updatedAt: new Date().toISOString()
@@ -250,6 +274,7 @@ export async function logAdminActivity(input: {
   message: string;
   session?: AdminSession | null;
   entityId?: string;
+  metadata?: Record<string, unknown>;
 }) {
   if (!adminActivityTypes.has(input.type)) return;
   const event: AdminActivityLog = {
@@ -260,13 +285,14 @@ export async function logAdminActivity(input: {
     username: input.session?.username,
     role: input.session?.role,
     entityId: input.entityId,
+    metadata: input.metadata,
     createdAt: new Date().toISOString()
   };
   try {
     await ensureEventSchema();
     await db.$executeRawUnsafe(
-      `INSERT INTO "AdminActivityLog" ("id", "type", "message", "adminId", "username", "role", "entityId", "createdAt")
-       VALUES ($1, $2::"AdminActivityType", $3, $4, $5, $6, $7, $8)`,
+      `INSERT INTO "AdminActivityLog" ("id", "type", "message", "adminId", "username", "role", "entityId", "metadata", "createdAt")
+       VALUES ($1, $2::"AdminActivityType", $3, $4, $5, $6, $7, $8::jsonb, $9)`,
       event.id,
       event.type,
       event.message,
@@ -274,6 +300,7 @@ export async function logAdminActivity(input: {
       event.username ?? null,
       event.role ?? null,
       event.entityId ?? null,
+      event.metadata ? JSON.stringify(event.metadata) : null,
       new Date(event.createdAt)
     );
   } catch {

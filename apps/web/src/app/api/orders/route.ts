@@ -4,22 +4,24 @@ import { quoteDelivery } from "@/lib/delivery";
 import { getPublishedMenu } from "@/lib/menuStore";
 import { readOperationsSettings } from "@/lib/operationsSettings";
 import { readBookingStore } from "@/lib/bookingStore";
+import { isValidTableQrToken } from "@/lib/tableQr";
 import { calculatePrice, validatePostcode, type CheckoutInput } from "@saba/shared";
 
 function normaliseTable(value?: string | null) {
   return String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-async function isActiveTable(tableNumber?: string) {
+async function getActiveTable(tableNumber?: string, tableId?: string) {
   const requested = normaliseTable(tableNumber);
-  if (!requested) return false;
+  if (!requested && !tableId) return null;
   const store = await readBookingStore();
-  return store.tables.some((table) => {
+  return store.tables.find((table) => {
     if (!table.active) return false;
+    if (tableId && table.id === tableId) return true;
     const name = normaliseTable(table.name);
     const shortName = name.replace(/^table\s+/, "");
     return requested === name || requested === shortName;
-  });
+  }) ?? null;
 }
 
 export async function GET(request: Request) {
@@ -44,7 +46,8 @@ export async function POST(request: Request) {
   if (orderType === "DINE_IN" && settings.dineInEnabled === false) {
     return NextResponse.json({ error: "Dine-in QR ordering is currently switched off." }, { status: 400 });
   }
-  if (orderType === "DINE_IN" && !(await isActiveTable(input.tableNumber))) {
+  const activeTable = orderType === "DINE_IN" ? await getActiveTable(input.tableNumber, input.tableId) : null;
+  if (orderType === "DINE_IN" && (!activeTable || !isValidTableQrToken(activeTable, input.tableToken))) {
     return NextResponse.json({ error: "Please scan an active table QR code inside Saba Cafe before ordering." }, { status: 400 });
   }
   if (orderType === "COLLECTION" && !settings.pickupEnabled) {
@@ -73,7 +76,13 @@ export async function POST(request: Request) {
   );
   if (orderType !== "DINE_IN" && !totals.minimumMet) return NextResponse.json({ error: "Minimum order value has not been met." }, { status: 400 });
   try {
-    const order = await createOrder({ ...input, orderType, fulfilmentType: orderType === "DELIVERY" ? "DELIVERY" : "PICKUP" });
+    const order = await createOrder({
+      ...input,
+      tableId: activeTable?.id ?? input.tableId,
+      tableNumber: activeTable?.name ?? input.tableNumber,
+      orderType,
+      fulfilmentType: orderType === "DELIVERY" ? "DELIVERY" : "PICKUP"
+    });
     return NextResponse.json(order, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Order could not be created." }, { status: 400 });

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminSessionFromRequest } from "@/lib/adminSession";
 import { readBookingStore } from "@/lib/bookingStore";
+import { tableQrToken } from "@/lib/tableQr";
 
 function escapeXml(value: string) {
   return value
@@ -90,7 +91,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ tabl
   const table = store.tables.find((candidate) => candidate.id === tableId);
   if (!table) return NextResponse.json({ error: "Table not found." }, { status: 404 });
   const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://sabacafe.co.uk").replace(/\/$/, "");
-  const url = `${origin}/order?type=dine-in&table=${encodeURIComponent(table.name)}`;
+  const token = tableQrToken(table);
+  const url = `${origin}/order?type=dine-in&tableId=${encodeURIComponent(table.id)}&table=${encodeURIComponent(table.name)}&token=${encodeURIComponent(token)}`;
   return new Response(qrSvg(url, table.name, origin), {
     headers: {
       "content-type": "image/svg+xml; charset=utf-8",

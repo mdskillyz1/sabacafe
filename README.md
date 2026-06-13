@@ -72,6 +72,9 @@ GOOGLE_PLACES_API_KEY         Google Places API key for approved review fetches
 STRIPE_SECRET_KEY             Stripe secret key
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 STRIPE_WEBHOOK_SECRET         Stripe webhook signing secret
+TABLE_QR_SECRET               Long random secret used to sign table QR ordering links
+RESEND_API_KEY                Optional: Resend API key for staff invitation emails
+STAFF_INVITE_FROM_EMAIL       Sender address for staff invites, for example Saba Cafe <hello@sabacafe.co.uk>
 VAT_RATE                      Default 0.20
 MINIMUM_ORDER_PENCE           Default 1200
 ```
@@ -79,6 +82,8 @@ MINIMUM_ORDER_PENCE           Default 1200
 For Vercel, `NEXT_PUBLIC_SITE_URL` is recommended for correct social preview URLs, but the app also falls back to Vercel's `VERCEL_URL` so the homepage can render without it. Stripe and Google variables are optional for the temporary preview path. Missing Stripe values disable online card payment startup; orders are only marked paid after a confirmed Stripe webhook.
 
 Menu, ordering, operations settings, analytics, and admin activity persistence require `DATABASE_URL`. If it is missing, the admin menu page shows a setup message and save/publish buttons are disabled. Run `PATH="$PWD/tools:$PATH" ./tools/pnpm db:push` after adding the database URL so the latest columns exist before staff publish dishes or run live service. Local JSON fallbacks are only for read-only development previews and are not used as a production-saving workaround.
+
+Table QR ordering uses signed links. Set `TABLE_QR_SECRET` in Vercel before printing final table cards; changing this secret later invalidates older printed QR codes, so regenerate and reprint table QRs after any rotation.
 
 ### Neon / Vercel Persistence
 
@@ -104,9 +109,19 @@ Shop username: saba-shop
 Shop temporary password: SabaShop#2716!
 ```
 
-Change these temporary passwords after launch from `/admin/users`. Owner accounts can access every admin section. Shop accounts are for day-to-day operations and are limited to orders, kitchen, bookings, reviews, and the operational overview.
+Change these temporary passwords after launch from `/admin/users`. Owner accounts can access every admin section. Manager accounts can access day-to-day operations. Staff accounts are limited to table ordering. Kitchen accounts are limited to the kitchen display and kitchen order status updates.
 
 Admin authentication uses usernames, secure password hashes, signed HTTP-only session cookies, role-based access, and basic login rate limiting. Owner accounts can manage admin users from `/admin/users`.
+
+Staff invite emails:
+
+1. Create a Resend account at `resend.com`.
+2. Verify the sending domain or email address, ideally `sabacafe.co.uk`.
+3. Add `RESEND_API_KEY` in Vercel environment variables.
+4. Set `STAFF_INVITE_FROM_EMAIL`, for example `Saba Cafe <hello@sabacafe.co.uk>`.
+5. Redeploy. Owner-created staff invites will then send by email automatically.
+
+If `RESEND_API_KEY` is not configured, the system still creates a secure invite link and shows a copy button in Staff Management, but no email is sent.
 
 Admin session variable:
 

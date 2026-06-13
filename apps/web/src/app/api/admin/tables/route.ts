@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { adminSessionFromRequest } from "@/lib/adminSession";
 import { readBookingStore, writeBookingStore } from "@/lib/bookingStore";
+import { tableQrToken } from "@/lib/tableQr";
 
-function qrUrl(request: Request, tableName: string) {
+function signedQrUrl(request: Request, table: { id: string; name: string }) {
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
-  return `${origin}/order?type=dine-in&table=${encodeURIComponent(tableName)}`;
+  return `${origin}/order?type=dine-in&tableId=${encodeURIComponent(table.id)}&table=${encodeURIComponent(table.name)}&token=${encodeURIComponent(tableQrToken(table))}`;
 }
 
 export async function GET(request: Request) {
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
   if (!session) return NextResponse.json({ error: "Admin login required." }, { status: 401 });
   const store = await readBookingStore();
   return NextResponse.json({
-    tables: store.tables.map((table) => ({ ...table, qrCodeUrl: qrUrl(request, table.name) }))
+    tables: store.tables.map((table) => ({ ...table, qrCodeUrl: signedQrUrl(request, table) }))
   });
 }
 
@@ -28,5 +29,5 @@ export async function POST(request: Request) {
     active: body.active !== false
   };
   const next = await writeBookingStore({ ...store, tables: [...store.tables, table] });
-  return NextResponse.json({ table: { ...table, qrCodeUrl: qrUrl(request, table.name) }, tables: next.tables }, { status: 201 });
+  return NextResponse.json({ table: { ...table, qrCodeUrl: signedQrUrl(request, table) }, tables: next.tables }, { status: 201 });
 }

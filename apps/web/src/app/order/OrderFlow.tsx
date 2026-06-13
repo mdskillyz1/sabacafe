@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bike, CheckCircle2, Clock, CreditCard, Minus, Plus, QrCode, ReceiptText, ShoppingBag, Store } from "lucide-react";
+import { Bike, Camera, CheckCircle2, Clock, CreditCard, Minus, Plus, QrCode, ReceiptText, ShoppingBag, Store, X } from "lucide-react";
 import { MenuCard } from "@/components/MenuCard";
 import {
   businessInfo,
@@ -17,13 +17,30 @@ import {
   type OperationsSettings
 } from "@saba/shared";
 
+declare global {
+  interface Window {
+    BarcodeDetector?: new (options?: { formats?: string[] }) => {
+      detect(source: HTMLVideoElement): Promise<Array<{ rawValue: string }>>;
+    };
+  }
+}
+
+type TableSession = {
+  tableId: string;
+  tableNumber: string;
+  token: string;
+};
+
 export function OrderFlow() {
   const basketRef = useRef<HTMLElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const scanStreamRef = useRef<MediaStream | null>(null);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [fulfilmentType, setFulfilmentType] = useState<FulfilmentType>("PICKUP");
   const [orderType, setOrderType] = useState<OrderType>("DINE_IN");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("PAY_IN_STORE");
   const [tableNumber, setTableNumber] = useState("");
+  const [tableSession, setTableSession] = useState<TableSession | null>(null);
   const [hasTableQrAccess, setHasTableQrAccess] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -40,6 +57,8 @@ export function OrderFlow() {
   const [menuPublished, setMenuPublished] = useState(false);
   const [lastAdded, setLastAdded] = useState("");
   const [cartPulse, setCartPulse] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scannerMessage, setScannerMessage] = useState("");
   const [settings, setSettings] = useState<OperationsSettings>({
     pickupEnabled: false,
     deliveryEnabled: false,
@@ -65,15 +84,29 @@ export function OrderFlow() {
     const params = new URLSearchParams(window.location.search);
     const type = params.get("type");
     const table = params.get("table");
-    const isDineInQrLink = (type === "dine-in" || type === "dine_in") && Boolean(table?.trim());
+    const tableId = params.get("tableId");
+    const token = params.get("token");
     if (type === "dine-in" || type === "dine_in") {
       setOrderType("DINE_IN");
       setFulfilmentType("PICKUP");
       setPaymentMethod("PAY_IN_STORE");
       setPromoCode("");
     }
-    setHasTableQrAccess(isDineInQrLink);
     if (table) setTableNumber(table);
+
+    const storedSession = window.sessionStorage.getItem("saba-table-session");
+    if ((tableId || table) && token) {
+      validateTableSession({ tableId, table, token });
+    } else if (storedSession) {
+      try {
+        const parsed = JSON.parse(storedSession) as TableSession;
+        validateTableSession({ tableId: parsed.tableId, table: parsed.tableNumber, token: parsed.token });
+      } catch {
+        window.sessionStorage.removeItem("saba-table-session");
+      }
+    } else {
+      setHasTableQrAccess(false);
+    }
 
     fetch("/api/menu", { cache: "no-store" })
       .then((response) => response.json())
@@ -98,6 +131,58 @@ export function OrderFlow() {
         }
       });
   }, []);
+
+  useEffect(() => {
+    if (!scannerOpen) return;
+    let stopped = false;
+    let animationFrame = 0;
+
+    async function startScanner() {
+      setScannerMessage("");
+      if (!window.BarcodeDetector || !navigator.mediaDevices?.getUserMedia) {
+        setScannerMessage("Camera scanning is not available in this browser. Please scan the QR code with your phone camera.");
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        if (stopped) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        scanStreamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+        const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+        const scan = async () => {
+          if (stopped || !videoRef.current) return;
+          try {
+            const codes = await detector.detect(videoRef.current);
+            const rawValue = codes[0]?.rawValue;
+            if (rawValue) {
+              await handleScannedQr(rawValue);
+              return;
+            }
+          } catch {
+            // Keep scanning; some browsers throw while video metadata is settling.
+          }
+          animationFrame = window.requestAnimationFrame(scan);
+        };
+        animationFrame = window.requestAnimationFrame(scan);
+      } catch {
+        setScannerMessage("Camera permission was not allowed. Please use your phone camera to scan the QR code on the table.");
+      }
+    }
+
+    startScanner();
+    return () => {
+      stopped = true;
+      if (animationFrame) window.cancelAnimationFrame(animationFrame);
+      scanStreamRef.current?.getTracks().forEach((track) => track.stop());
+      scanStreamRef.current = null;
+    };
+  }, [scannerOpen]);
 
   useEffect(() => {
     if (orderType !== "DELIVERY" || fulfilmentType !== "DELIVERY" || !validatePostcode(postcode)) {
@@ -147,6 +232,10 @@ export function OrderFlow() {
   }, [cartPulse]);
 
   function addItem(item: MenuItem, optionIds: string[] = [], optionLabels: string[] = [], notes = "") {
+    if (!hasTableQrAccess) {
+      openScanner();
+      return;
+    }
     setLastAdded(item.name);
     setCartPulse(true);
     setCart((current) => {
@@ -170,6 +259,63 @@ export function OrderFlow() {
         }
       ];
     });
+  }
+
+  function openScanner() {
+    setScannerOpen(true);
+    setScannerMessage("");
+  }
+
+  async function validateTableSession(input: { tableId?: string | null; table?: string | null; token?: string | null }) {
+    if (!input.token) {
+      setHasTableQrAccess(false);
+      return false;
+    }
+    const params = new URLSearchParams();
+    if (input.tableId) params.set("tableId", input.tableId);
+    if (input.table) params.set("table", input.table);
+    params.set("token", input.token);
+    try {
+      const response = await fetch(`/api/tables/validate?${params.toString()}`, { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok || !data.valid || !data.table) {
+        setHasTableQrAccess(false);
+        setTableSession(null);
+        window.sessionStorage.removeItem("saba-table-session");
+        setScannerMessage(data.error ?? "This QR code is not a valid Saba Cafe table code.");
+        return false;
+      }
+      const nextSession = { tableId: data.table.id, tableNumber: data.table.name, token: data.token };
+      setTableSession(nextSession);
+      setTableNumber(data.table.name);
+      setHasTableQrAccess(true);
+      window.sessionStorage.setItem("saba-table-session", JSON.stringify(nextSession));
+      setScannerOpen(false);
+      setScannerMessage("");
+      return true;
+    } catch {
+      setHasTableQrAccess(false);
+      setScannerMessage("We could not verify this table QR code. Please ask a staff member for help.");
+      return false;
+    }
+  }
+
+  async function handleScannedQr(rawValue: string) {
+    try {
+      const scannedUrl = new URL(rawValue);
+      const type = scannedUrl.searchParams.get("type");
+      if (type !== "dine-in" && type !== "dine_in") {
+        setScannerMessage("That QR code is not a Saba Cafe table ordering code.");
+        return;
+      }
+      await validateTableSession({
+        tableId: scannedUrl.searchParams.get("tableId"),
+        table: scannedUrl.searchParams.get("table"),
+        token: scannedUrl.searchParams.get("token")
+      });
+    } catch {
+      setScannerMessage("That QR code could not be read as a table ordering link.");
+    }
   }
 
   function lineUnitPrice(line: CartLine) {
@@ -199,7 +345,7 @@ export function OrderFlow() {
     const activePaymentMethod: PaymentMethod = dineInOnlyMode ? "PAY_IN_STORE" : paymentMethod;
     if (!cart.length) return setError("Add at least one dish to continue.");
     if (activeOrderType === "DINE_IN" && settings.dineInEnabled === false) return setError("Dine-in QR ordering is currently switched off.");
-    if (activeOrderType === "DINE_IN" && !hasTableQrAccess) return setError("Please scan the QR code on your table to send an order to the kitchen.");
+    if (activeOrderType === "DINE_IN" && (!hasTableQrAccess || !tableSession)) return setError("Please scan the QR code on your table to send an order to the kitchen.");
     if (activeOrderType === "COLLECTION" && !settings.pickupEnabled) return setError("Collection is currently switched off.");
     if (activeOrderType === "DELIVERY" && !settings.deliveryEnabled) return setError("Delivery is currently switched off.");
     if (activeOrderType !== "DINE_IN" && !totals.minimumMet) return setError(`Minimum order is ${money(settings.minimumOrderPence ?? 1200)} before discounts.`);
@@ -223,7 +369,9 @@ export function OrderFlow() {
         fulfilmentType: activeFulfilmentType,
         orderType: activeOrderType,
         paymentMethod: activePaymentMethod,
-        tableNumber,
+        tableId: tableSession?.tableId,
+        tableNumber: tableSession?.tableNumber ?? tableNumber,
+        tableToken: tableSession?.token,
         addressLine1,
         postcode,
         deliveryNotes,
@@ -294,6 +442,9 @@ export function OrderFlow() {
           <p className="mt-3 max-w-full text-base leading-7 text-cream/75">
             Scan the QR code, add your food, send the order to the kitchen, and a staff member will prepare it shortly.
           </p>
+          <div className={`mt-5 rounded-lg border p-4 text-sm font-semibold ${hasTableQrAccess ? "border-mint/30 bg-mint/15 text-cream" : "border-saffron/40 bg-black/10 text-cream"}`}>
+            {hasTableQrAccess ? `Ordering for ${tableSession?.tableNumber ?? tableNumber}` : "To place an order for table service, please scan the QR code on your table."}
+          </div>
         </div>
         {menuLoading ? (
           <div className="mt-8 rounded-lg border border-date/10 bg-white p-8 shadow-sm" aria-live="polite">
@@ -349,7 +500,14 @@ export function OrderFlow() {
                   <h2 className="font-display text-3xl font-semibold text-date">{category.name}</h2>
                   <div className="mt-4 grid gap-5">
                     {categoryItems.map((item) => (
-                      <MenuCard key={item.id} item={item} onAdd={addItem} quantity={cartQuantities.get(item.id) ?? 0} />
+                      <MenuCard
+                        key={item.id}
+                        item={item}
+                        onAdd={hasTableQrAccess ? addItem : undefined}
+                        onLockedAction={!hasTableQrAccess ? openScanner : undefined}
+                        lockedActionLabel="Scan Table QR to Order"
+                        quantity={cartQuantities.get(item.id) ?? 0}
+                      />
                     ))}
                   </div>
                 </section>
@@ -383,6 +541,11 @@ export function OrderFlow() {
                   ? "Send your order to the kitchen from the table, then pay at the counter."
                   : "You can view the menu here. To place an order, please scan the QR code on your table inside Saba Cafe."}
               </p>
+              {!hasTableQrAccess ? (
+                <button type="button" onClick={openScanner} className="focus-ring mt-3 inline-flex min-h-11 items-center gap-2 rounded-full bg-date px-4 py-2 text-sm font-semibold text-cream">
+                  <Camera size={16} /> Scan Table QR
+                </button>
+              ) : null}
             </div>
           ) : (
             <>
@@ -485,8 +648,7 @@ export function OrderFlow() {
                   className="focus-ring mt-1 w-full rounded-md border border-date/15 px-4 py-3 font-normal"
                   placeholder="Scan table QR code"
                   value={tableNumber}
-                  onChange={(event) => setTableNumber(event.target.value)}
-                  readOnly={!hasTableQrAccess}
+                  readOnly
                 />
                 {!hasTableQrAccess ? <span className="mt-2 block text-xs font-normal text-clay">Ordering unlocks from the table QR code only.</span> : null}
               </label>
@@ -564,6 +726,28 @@ export function OrderFlow() {
             </span>
             <span className="shrink-0 rounded-full bg-cream px-4 py-2 text-sm font-semibold text-date">{money(totals.totalPence)}</span>
           </button>
+        </div>
+      ) : null}
+      {scannerOpen ? (
+        <div className="fixed inset-0 z-[90] bg-date/70 p-4 backdrop-blur-sm">
+          <div className="mx-auto mt-8 max-w-lg rounded-lg bg-white p-5 shadow-soft">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-clay">Table QR required</p>
+                <h2 className="mt-1 font-display text-3xl font-semibold text-date">Scan the QR code on your table.</h2>
+              </div>
+              <button type="button" onClick={() => setScannerOpen(false)} className="focus-ring rounded-full border border-date/10 p-2 text-date">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="mt-5 overflow-hidden rounded-lg border border-date/10 bg-date">
+              <video ref={videoRef} className="aspect-square w-full object-cover" muted playsInline />
+            </div>
+            <p className="mt-4 rounded-md bg-cream p-3 text-sm leading-6 text-date/70">
+              Ordering is only available inside Saba Cafe from a table QR code. If the scanner does not open, use your phone camera to scan the QR card on the table.
+            </p>
+            {scannerMessage ? <p className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-700">{scannerMessage}</p> : null}
+          </div>
         </div>
       ) : null}
     </main>

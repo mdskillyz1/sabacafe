@@ -75,6 +75,7 @@ export type CheckoutInput = {
   paymentMethod?: PaymentMethod;
   tableId?: string;
   tableNumber?: string;
+  tableToken?: string;
   addressLine1?: string;
   addressLine2?: string;
   postcode?: string;

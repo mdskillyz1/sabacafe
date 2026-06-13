@@ -99,6 +99,28 @@ function validatePlatter(itemId: string, itemName: string, selectedOptions: Menu
   }
 }
 
+async function validateAndLabelCartItems(items: CartLine[]) {
+  const menu = await getPublishedMenu();
+  for (const line of items) {
+    const item = menu.items.find((candidate) => candidate.id === line.menuItemId);
+    if (!item) throw new Error(`${line.name || "This item"} is no longer available.`);
+    if (!isItemOrderableToday(item)) throw new Error(`${item.name} is only available on Tuesday and Friday.`);
+    const selectedOptions = (line.optionIds ?? [])
+      .map((optionId) => item.options.find((option) => option.id === optionId))
+      .filter((option): option is MenuItemOption => Boolean(option));
+    validatePlatter(item.id, item.name, selectedOptions);
+    const requiredGroups = requiredOptionGroups(item);
+    if (requiredGroups.length) {
+      const missingGroups = requiredGroups.filter((group) => !selectedOptions.some((option) => optionGroup(option) === group));
+      if (missingGroups.length) {
+        throw new Error(`Please choose ${missingGroups.join(", ")} for ${item.name}.`);
+      }
+    }
+    line.optionLabels = selectedOptions.length ? aggregateOptionLabels(selectedOptions) : [];
+  }
+  return menu;
+}
+
 async function addEnumValue(typeName: string, value: string) {
   await db.$executeRawUnsafe(`
     DO $$
@@ -350,24 +372,7 @@ export async function createOrder(input: CheckoutInput) {
     orderType === "DELIVERY" ? await quoteDelivery(input.postcode ?? "", settings) : { allowed: true, deliveryFeePence: 0 };
   if (!deliveryQuote.allowed) throw new Error(deliveryQuote.reason ?? "This address is outside our delivery radius.");
 
-  const menu = await getPublishedMenu();
-  for (const line of input.items) {
-    const item = menu.items.find((candidate) => candidate.id === line.menuItemId);
-    if (!item) throw new Error(`${line.name || "This item"} is no longer available.`);
-    if (!isItemOrderableToday(item)) throw new Error(`${item.name} is only available on Tuesday and Friday.`);
-    const selectedOptions = (line.optionIds ?? [])
-      .map((optionId) => item.options.find((option) => option.id === optionId))
-      .filter((option): option is MenuItemOption => Boolean(option));
-    validatePlatter(item.id, item.name, selectedOptions);
-    const requiredGroups = requiredOptionGroups(item);
-    if (requiredGroups.length) {
-      const missingGroups = requiredGroups.filter((group) => !selectedOptions.some((option) => optionGroup(option) === group));
-      if (missingGroups.length) {
-        throw new Error(`Please choose ${missingGroups.join(", ")} for ${item.name}.`);
-      }
-    }
-    line.optionLabels = selectedOptions.length ? aggregateOptionLabels(selectedOptions) : [];
-  }
+  const menu = await validateAndLabelCartItems(input.items);
   const fulfilmentType = orderTypeToLegacyFulfilment(orderType);
   const totals = calculatePrice(
     input.items,
@@ -529,6 +534,65 @@ export async function updateOrderPaymentStatus(id: string, status: PaymentStatus
 export async function updateOrderNotes(id: string, notes: string) {
   await ensureOrderSchema();
   await db.$executeRawUnsafe(`UPDATE "Order" SET "notes" = $1, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $2`, notes, id);
+  return getOrder(id);
+}
+
+export async function updateOrderItems(id: string, items: CartLine[]) {
+  await ensureOrderSchema();
+  if (!items.length) throw new Error("Add at least one item before saving.");
+  const order = await getOrder(id);
+  if (!order) return null;
+  if (["COMPLETED", "CANCELLED"].includes(order.status)) throw new Error("Completed or cancelled orders cannot be amended.");
+
+  const menu = await validateAndLabelCartItems(items);
+  const totals = calculatePrice(
+    items,
+    menu.items,
+    orderTypeToLegacyFulfilment(order.orderType),
+    order.checkout.promoCode,
+    0.2,
+    0,
+    order.deliveryFeePence
+  );
+  const notes = items.map((item) => item.notes).filter(Boolean).join("; ") || null;
+
+  await db.$transaction(async (tx: any) => {
+    await tx.$executeRawUnsafe(`DELETE FROM "OrderItem" WHERE "orderId" = $1`, id);
+    for (const line of items) {
+      await tx.$executeRawUnsafe(
+        `INSERT INTO "OrderItem" ("id", "orderId", "menuItemId", "name", "unitPricePence", "quantity", "optionIds", "optionLabels", "addOnIds", "notes")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        crypto.randomUUID(),
+        id,
+        line.menuItemId,
+        line.name,
+        line.unitPricePence,
+        line.quantity,
+        line.optionIds ?? [],
+        line.optionLabels ?? [],
+        line.addOnIds ?? [],
+        line.notes ?? null
+      );
+    }
+    await tx.$executeRawUnsafe(
+      `UPDATE "Order"
+       SET "subtotalPence" = $1, "discountPence" = $2, "deliveryFeePence" = $3, "vatPence" = $4, "totalPence" = $5, "notes" = $6, "updatedAt" = CURRENT_TIMESTAMP
+       WHERE "id" = $7`,
+      totals.subtotalPence,
+      totals.discountPence,
+      totals.deliveryFeePence,
+      totals.vatPence,
+      totals.totalPence,
+      notes,
+      id
+    );
+    await tx.$executeRawUnsafe(
+      `UPDATE "Payment" SET "amountPence" = $1, "updatedAt" = CURRENT_TIMESTAMP WHERE "orderId" = $2`,
+      totals.totalPence,
+      id
+    );
+  });
+
   return getOrder(id);
 }
 

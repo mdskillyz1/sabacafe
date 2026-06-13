@@ -65,11 +65,15 @@ function CounterButton({ label, value, onMinus, onPlus, disableMinus, disablePlu
 export function MenuCard({
   item,
   onAdd,
+  lockedActionLabel,
+  onLockedAction,
   compact = false,
   quantity = 0
 }: {
   item: MenuItem;
   onAdd?: (item: MenuItem, optionIds?: string[], optionLabels?: string[], notes?: string) => void;
+  lockedActionLabel?: string;
+  onLockedAction?: () => void;
   compact?: boolean;
   quantity?: number;
 }) {
@@ -264,7 +268,21 @@ export function MenuCard({
             <span>Spice {item.spiceLevel}/3</span>
           </div>
         ) : null}
-        {onAdd ? (
+        {onLockedAction ? (
+          <div className="mt-auto space-y-3 pt-4">
+            <button
+              type="button"
+              onClick={onLockedAction}
+              disabled={!orderableToday}
+              className="focus-ring w-full rounded-full bg-date px-4 py-3 text-center text-sm font-semibold text-cream transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-date/30"
+            >
+              {orderableToday ? lockedActionLabel ?? "Scan Table QR to Order" : unavailableMessage}
+            </button>
+            <p className="text-center text-xs leading-5 text-date/55">
+              Table ordering unlocks after scanning the QR code inside Saba Cafe.
+            </p>
+          </div>
+        ) : onAdd ? (
           <div className="mt-auto space-y-3 pt-4">
             <label className="block text-xs font-bold uppercase tracking-[0.12em] text-date/45">
               Notes
@@ -293,7 +311,7 @@ export function MenuCard({
               orderableToday ? "bg-date text-cream" : "pointer-events-none bg-date/30 text-cream"
             }`}
           >
-            {orderableToday ? "Order this" : unavailableMessage}
+            {orderableToday ? "Scan Table QR to Order" : unavailableMessage}
           </Link>
         )}
       </div>
