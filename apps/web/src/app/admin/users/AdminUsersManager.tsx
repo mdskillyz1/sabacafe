@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Copy, Download, Eye, EyeOff, MailPlus, Save, Trash2 } from "lucide-react";
+import { Award, ChefHat, Copy, Download, Eye, EyeOff, MailPlus, ReceiptText, Save, ShieldCheck, Table2, Trash2 } from "lucide-react";
 import type { AdminRole, PublicAdminUser } from "@/lib/adminUsers";
 
 type Draft = {
@@ -22,6 +22,29 @@ type StaffActivity = {
   metadata?: Record<string, unknown>;
   createdAt: string;
 };
+type StaffMetrics = {
+  kpis: {
+    totalActions: number;
+    activeStaff: number;
+    ordersCreated: number;
+    paymentsMarkedPaid: number;
+    tablesCleared: number;
+    kitchenUpdates: number;
+  };
+  byRole: { label: string; value: number }[];
+  topStaff: {
+    username: string;
+    role: string;
+    actions: number;
+    ordersCreated: number;
+    itemsAdded: number;
+    ordersPaid: number;
+    tablesCleared: number;
+    sentToKitchen: number;
+    kitchenUpdates: number;
+    lastActiveAt: string;
+  }[];
+};
 
 const roleLabels: Record<AdminRole, string> = {
   SUPER_ADMIN: "Owner",
@@ -31,10 +54,16 @@ const roleLabels: Record<AdminRole, string> = {
 };
 
 const emptyDraft: Draft = { fullName: "", email: "", username: "", password: "", role: "STAFF", invite: true };
+const emptyMetrics: StaffMetrics = {
+  kpis: { totalActions: 0, activeStaff: 0, ordersCreated: 0, paymentsMarkedPaid: 0, tablesCleared: 0, kitchenUpdates: 0 },
+  byRole: [],
+  topStaff: []
+};
 
 export function AdminUsersManager() {
   const [users, setUsers] = useState<PublicAdminUser[]>([]);
   const [activity, setActivity] = useState<StaffActivity[]>([]);
+  const [metrics, setMetrics] = useState<StaffMetrics>(emptyMetrics);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [passwords, setPasswords] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
@@ -57,6 +86,11 @@ export function AdminUsersManager() {
     }
     setUsers(body.users);
     setActivity(activityBody?.staffActivity?.recent ?? []);
+    setMetrics({
+      kpis: activityBody?.staffActivity?.kpis ?? emptyMetrics.kpis,
+      byRole: activityBody?.staffActivity?.byRole ?? [],
+      topStaff: activityBody?.staffActivity?.topStaff ?? []
+    });
     setLoading(false);
   }
 
@@ -252,6 +286,95 @@ export function AdminUsersManager() {
         {message ? <p className="rounded-md bg-mint/10 p-3 text-sm font-semibold text-mint">{message}</p> : null}
         {error ? <p className="rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p> : null}
       </div>
+
+      <section className="rounded-lg border border-date/10 bg-white p-6 shadow-sm lg:col-span-2">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-3xl font-semibold text-date">Staff performance</h2>
+            <p className="mt-2 text-sm leading-6 text-date/65">Owner view of staff, kitchen, and manager activity from the last 30 days.</p>
+          </div>
+          <span className="rounded-full bg-cream px-4 py-2 text-sm font-semibold text-date">Real activity only</span>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          {[
+            { label: "Total actions", value: metrics.kpis.totalActions, icon: ShieldCheck },
+            { label: "Active staff", value: metrics.kpis.activeStaff, icon: Award },
+            { label: "Orders created", value: metrics.kpis.ordersCreated, icon: ReceiptText },
+            { label: "Payments marked", value: metrics.kpis.paymentsMarkedPaid, icon: Save },
+            { label: "Tables cleared", value: metrics.kpis.tablesCleared, icon: Table2 },
+            { label: "Kitchen updates", value: metrics.kpis.kitchenUpdates, icon: ChefHat }
+          ].map((card) => (
+            <div key={card.label} className="rounded-lg border border-date/10 bg-cream/60 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-date/50">{card.label}</p>
+                <card.icon size={16} className="text-clay" />
+              </div>
+              <p className="mt-3 font-display text-3xl font-semibold text-date">{card.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
+          <div className="rounded-lg border border-date/10 bg-cream/40 p-4">
+            <h3 className="font-display text-2xl font-semibold text-date">Top staff activity</h3>
+            <div className="mt-4 overflow-x-auto">
+              {metrics.topStaff.length ? (
+                <table className="w-full min-w-[780px] text-left text-sm">
+                  <thead className="text-date/50">
+                    <tr>
+                      <th className="py-2">Staff</th>
+                      <th>Actions</th>
+                      <th>Orders</th>
+                      <th>Items added</th>
+                      <th>Paid</th>
+                      <th>Cleared</th>
+                      <th>Kitchen</th>
+                      <th>Last active</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metrics.topStaff.map((staff) => (
+                      <tr key={`${staff.username}-${staff.role}`} className="border-t border-date/10">
+                        <td className="py-3 font-semibold text-date">{staff.username}<span className="block text-xs font-normal text-date/45">{staff.role}</span></td>
+                        <td>{staff.actions}</td>
+                        <td>{staff.ordersCreated}</td>
+                        <td>{staff.itemsAdded}</td>
+                        <td>{staff.ordersPaid}</td>
+                        <td>{staff.tablesCleared}</td>
+                        <td>{staff.kitchenUpdates}</td>
+                        <td className="text-date/60">{new Date(staff.lastActiveAt).toLocaleString("en-GB")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="rounded-md bg-white p-4 text-sm text-date/60">Staff performance will appear once staff start using table orders and kitchen updates.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-date/10 bg-cream/40 p-4">
+            <h3 className="font-display text-2xl font-semibold text-date">Activity by role</h3>
+            <div className="mt-4 space-y-3">
+              {metrics.byRole.length ? metrics.byRole.map((role) => {
+                const max = Math.max(1, ...metrics.byRole.map((row) => row.value));
+                return (
+                  <div key={role.label}>
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="font-semibold text-date">{role.label}</span>
+                      <span className="text-date/55">{role.value}</span>
+                    </div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
+                      <div className="h-full rounded-full bg-mint" style={{ width: `${Math.max(4, (role.value / max) * 100)}%` }} />
+                    </div>
+                  </div>
+                );
+              }) : <p className="rounded-md bg-white p-4 text-sm text-date/60">No staff activity by role yet.</p>}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="rounded-lg border border-date/10 bg-white p-6 shadow-sm lg:col-span-2">
         <div className="flex flex-wrap items-start justify-between gap-3">

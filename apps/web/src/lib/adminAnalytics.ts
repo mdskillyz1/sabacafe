@@ -103,6 +103,76 @@ function hourCounts(items: { createdAt?: string; startTime?: string }[]) {
   return Array.from(counts.entries()).map(([label, value]) => ({ label, value })).sort((a, b) => a.label.localeCompare(b.label));
 }
 
+function buildStaffMetrics(staffActivity: Awaited<ReturnType<typeof readAdminActivity>>["events"], allActivity: Awaited<ReturnType<typeof readAdminActivity>>["events"]) {
+  const staffMap = new Map<
+    string,
+    {
+      username: string;
+      role: string;
+      actions: number;
+      ordersCreated: number;
+      itemsAdded: number;
+      ordersPaid: number;
+      tablesCleared: number;
+      sentToKitchen: number;
+      kitchenUpdates: number;
+      lastActiveAt: string;
+    }
+  >();
+  for (const event of staffActivity) {
+    const username = event.username ?? "System";
+    const key = `${username}:${event.role ?? "System"}`;
+    const current =
+      staffMap.get(key) ??
+      {
+        username,
+        role: event.role ?? "System",
+        actions: 0,
+        ordersCreated: 0,
+        itemsAdded: 0,
+        ordersPaid: 0,
+        tablesCleared: 0,
+        sentToKitchen: 0,
+        kitchenUpdates: 0,
+        lastActiveAt: event.createdAt
+      };
+    current.actions += 1;
+    if (event.type === "order_created") current.ordersCreated += 1;
+    if (event.type === "order_item_added") current.itemsAdded += 1;
+    if (event.type === "order_marked_paid") current.ordersPaid += 1;
+    if (event.type === "table_cleared") current.tablesCleared += 1;
+    if (event.type === "order_sent_to_kitchen") current.sentToKitchen += 1;
+    if (event.type === "order_status_update" && event.role === "KITCHEN") current.kitchenUpdates += 1;
+    if (event.createdAt > current.lastActiveAt) current.lastActiveAt = event.createdAt;
+    staffMap.set(key, current);
+  }
+
+  const topStaff = Array.from(staffMap.values()).sort((a, b) => b.actions - a.actions);
+  const roles = Array.from(new Set(allActivity.map((event) => event.role ?? "System")));
+
+  return {
+    total: staffActivity.length,
+    kpis: {
+      totalActions: staffActivity.length,
+      activeStaff: topStaff.filter((staff) => staff.username !== "System").length,
+      ordersCreated: staffActivity.filter((event) => event.type === "order_created").length,
+      paymentsMarkedPaid: staffActivity.filter((event) => event.type === "order_marked_paid").length,
+      tablesCleared: staffActivity.filter((event) => event.type === "table_cleared").length,
+      kitchenUpdates: staffActivity.filter((event) => event.type === "order_status_update" && event.role === "KITCHEN").length
+    },
+    byType: Array.from(new Set(allActivity.map((event) => event.type))).map((type) => ({
+      label: type.replaceAll("_", " "),
+      value: staffActivity.filter((event) => event.type === type).length
+    })),
+    byRole: roles.map((role) => ({
+      label: role.replaceAll("_", " "),
+      value: staffActivity.filter((event) => (event.role ?? "System") === role).length
+    })),
+    topStaff: topStaff.slice(0, 8),
+    recent: staffActivity.slice(0, 12)
+  };
+}
+
 export async function getAnalytics(range: DateRange) {
   const previous = previousRange(range);
   const allOrders = await getDemoOrders();
@@ -217,14 +287,7 @@ export async function getAnalytics(range: DateRange) {
       bookingCompletions: websiteEvents.filter((event) => event.type === "booking_submit").length,
       series: groupByDate(websiteEvents, range, () => 1)
     },
-    staffActivity: {
-      total: staffActivity.length,
-      byType: Array.from(new Set(activityStore.events.map((event) => event.type))).map((type) => ({
-        label: type.replaceAll("_", " "),
-        value: staffActivity.filter((event) => event.type === type).length
-      })),
-      recent: staffActivity.slice(0, 12)
-    },
+    staffActivity: buildStaffMetrics(staffActivity, activityStore.events),
     activityFeed: [
       ...orders.map((order) => ({ id: order.id, type: "order", message: `Order ${order.orderNumber} ${order.status.toLowerCase().replaceAll("_", " ")}`, createdAt: order.createdAt })),
       ...bookings.map((booking) => ({ id: booking.id, type: "booking", message: `Booking request for ${booking.partySize} guest${booking.partySize === 1 ? "" : "s"}`, createdAt: booking.createdAt })),
