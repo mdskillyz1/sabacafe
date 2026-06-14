@@ -122,8 +122,34 @@ async function addEnumValue(typeName: string, value: string) {
 }
 
 async function ensureAdminUserSchema() {
+  await db.$executeRawUnsafe(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'AdminRole') THEN
+        CREATE TYPE "AdminRole" AS ENUM ('SUPER_ADMIN', 'MANAGER', 'STAFF', 'KITCHEN');
+      END IF;
+    END $$;
+  `);
   await addEnumValue("AdminRole", "MANAGER");
   await addEnumValue("AdminRole", "KITCHEN");
+  await db.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "AdminUser" (
+      "id" TEXT PRIMARY KEY,
+      "username" TEXT NOT NULL,
+      "fullName" TEXT,
+      "email" TEXT,
+      "passwordHash" TEXT NOT NULL,
+      "role" "AdminRole" NOT NULL DEFAULT 'STAFF',
+      "isActive" BOOLEAN NOT NULL DEFAULT true,
+      "inviteTokenHash" TEXT,
+      "inviteExpiresAt" TIMESTAMP(3),
+      "inviteAcceptedAt" TIMESTAMP(3),
+      "lastLogin" TIMESTAMP(3),
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "AdminUser_username_key" ON "AdminUser"("username");`);
   await db.$executeRawUnsafe(`ALTER TABLE "AdminUser" ADD COLUMN IF NOT EXISTS "fullName" TEXT;`);
   await db.$executeRawUnsafe(`ALTER TABLE "AdminUser" ADD COLUMN IF NOT EXISTS "email" TEXT;`);
   await db.$executeRawUnsafe(`ALTER TABLE "AdminUser" ADD COLUMN IF NOT EXISTS "inviteTokenHash" TEXT;`);
