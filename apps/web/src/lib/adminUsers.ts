@@ -468,21 +468,26 @@ export async function createStaffInvite(input: { fullName: string; email: string
   if (databaseAdminUsersEnabled()) {
     try {
       await ensureAdminUserSchema();
-      await db.adminUser.create({
-        data: {
-          username,
-          fullName: input.fullName.trim(),
-          email,
-          passwordHash,
-          role: input.role,
-          isActive: false,
-          inviteTokenHash: tokenHash(token),
-          inviteExpiresAt: expiresAt
-        }
-      });
+      await db.$executeRawUnsafe(
+        `INSERT INTO "AdminUser" (
+          "id", "username", "fullName", "email", "passwordHash", "role", "isActive", "inviteTokenHash", "inviteExpiresAt", "createdAt", "updatedAt"
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6::"AdminRole", false, $7, $8, $9, $10
+        )`,
+        `admin-${randomBytes(10).toString("hex")}`,
+        username,
+        input.fullName.trim(),
+        email,
+        passwordHash,
+        input.role,
+        tokenHash(token),
+        expiresAt,
+        new Date(),
+        new Date()
+      );
     } catch (error) {
       console.error("Database staff invite failed.", error);
-      return { ok: false as const, errors: { user: "Could not create staff invite. Check the database connection." } };
+      return { ok: false as const, errors: { user: "Could not create staff invite. The live database needs the latest staff schema. Run db:push or redeploy after the latest commit." } };
     }
   } else {
     const timestamp = now();
