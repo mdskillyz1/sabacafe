@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import jsQR from "jsqr";
 import { Bike, Camera, CheckCircle2, Clock, CreditCard, Minus, Plus, QrCode, ReceiptText, ShoppingBag, Store, X } from "lucide-react";
 import { MenuCard } from "@/components/MenuCard";
 import {
@@ -34,6 +35,7 @@ type TableSession = {
 export function OrderFlow() {
   const basketRef = useRef<HTMLElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scanStreamRef = useRef<MediaStream | null>(null);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [fulfilmentType, setFulfilmentType] = useState<FulfilmentType>("PICKUP");
@@ -58,7 +60,9 @@ export function OrderFlow() {
   const [lastAdded, setLastAdded] = useState("");
   const [cartPulse, setCartPulse] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [scannerMessage, setScannerMessage] = useState("");
+  const [scannerAttempt, setScannerAttempt] = useState(0);
+  const [scannerStatus, setScannerStatus] = useState("");
+  const [scannerError, setScannerError] = useState("");
   const [settings, setSettings] = useState<OperationsSettings>({
     pickupEnabled: false,
     deliveryEnabled: false,
@@ -138,13 +142,15 @@ export function OrderFlow() {
     let animationFrame = 0;
 
     async function startScanner() {
-      setScannerMessage("");
-      if (!window.BarcodeDetector || !navigator.mediaDevices?.getUserMedia) {
-        setScannerMessage("Camera scanning is not available in this browser. Please scan the QR code with your phone camera.");
+      setScannerError("");
+      setScannerStatus("Asking for camera permission...");
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setScannerStatus("");
+        setScannerError("Camera scanning is not available in this browser. Please scan the QR code with your phone camera.");
         return;
       }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
         if (stopped) {
           stream.getTracks().forEach((track) => track.stop());
           return;
@@ -154,13 +160,33 @@ export function OrderFlow() {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
         }
-        const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+        setScannerStatus("Camera ready. Point it at the QR code on your table.");
+        const detector = window.BarcodeDetector ? new window.BarcodeDetector({ formats: ["qr_code"] }) : null;
         const scan = async () => {
           if (stopped || !videoRef.current) return;
+          if (videoRef.current.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+            animationFrame = window.requestAnimationFrame(scan);
+            return;
+          }
           try {
-            const codes = await detector.detect(videoRef.current);
-            const rawValue = codes[0]?.rawValue;
+            let rawValue = "";
+            if (detector) {
+              const codes = await detector.detect(videoRef.current);
+              rawValue = codes[0]?.rawValue ?? "";
+            } else if (canvasRef.current && videoRef.current.videoWidth && videoRef.current.videoHeight) {
+              const canvas = canvasRef.current;
+              canvas.width = videoRef.current.videoWidth;
+              canvas.height = videoRef.current.videoHeight;
+              const context = canvas.getContext("2d", { willReadFrequently: true });
+              if (context) {
+                context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                rawValue = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" })?.data ?? "";
+              }
+            }
             if (rawValue) {
+              stopped = true;
+              setScannerStatus("QR found. Checking table...");
               await handleScannedQr(rawValue);
               return;
             }
@@ -170,8 +196,14 @@ export function OrderFlow() {
           animationFrame = window.requestAnimationFrame(scan);
         };
         animationFrame = window.requestAnimationFrame(scan);
-      } catch {
-        setScannerMessage("Camera permission was not allowed. Please use your phone camera to scan the QR code on the table.");
+      } catch (error) {
+        setScannerStatus("");
+        const name = error instanceof DOMException ? error.name : "";
+        setScannerError(
+          name === "NotAllowedError" || name === "SecurityError"
+            ? "Camera permission was not allowed. Please allow camera access, then tap Scan Table QR again."
+            : "The camera could not be opened. Please check browser camera permissions or use your phone camera to scan the table QR."
+        );
       }
     }
 
@@ -182,7 +214,7 @@ export function OrderFlow() {
       scanStreamRef.current?.getTracks().forEach((track) => track.stop());
       scanStreamRef.current = null;
     };
-  }, [scannerOpen]);
+  }, [scannerAttempt, scannerOpen]);
 
   useEffect(() => {
     if (orderType !== "DELIVERY" || fulfilmentType !== "DELIVERY" || !validatePostcode(postcode)) {
@@ -263,7 +295,9 @@ export function OrderFlow() {
 
   function openScanner() {
     setScannerOpen(true);
-    setScannerMessage("");
+    setScannerAttempt((current) => current + 1);
+    setScannerStatus("");
+    setScannerError("");
   }
 
   async function validateTableSession(input: { tableId?: string | null; table?: string | null; token?: string | null }) {
@@ -282,7 +316,8 @@ export function OrderFlow() {
         setHasTableQrAccess(false);
         setTableSession(null);
         window.sessionStorage.removeItem("saba-table-session");
-        setScannerMessage(data.error ?? "This QR code is not a valid Saba Cafe table code.");
+        setScannerStatus("");
+        setScannerError(data.error ?? "This QR code is not a valid Saba Cafe table code.");
         return false;
       }
       const nextSession = { tableId: data.table.id, tableNumber: data.table.name, token: data.token };
@@ -291,11 +326,13 @@ export function OrderFlow() {
       setHasTableQrAccess(true);
       window.sessionStorage.setItem("saba-table-session", JSON.stringify(nextSession));
       setScannerOpen(false);
-      setScannerMessage("");
+      setScannerStatus("");
+      setScannerError("");
       return true;
     } catch {
       setHasTableQrAccess(false);
-      setScannerMessage("We could not verify this table QR code. Please ask a staff member for help.");
+      setScannerStatus("");
+      setScannerError("We could not verify this table QR code. Please ask a staff member for help.");
       return false;
     }
   }
@@ -305,7 +342,8 @@ export function OrderFlow() {
       const scannedUrl = new URL(rawValue);
       const type = scannedUrl.searchParams.get("type");
       if (type !== "dine-in" && type !== "dine_in") {
-        setScannerMessage("That QR code is not a Saba Cafe table ordering code.");
+        setScannerStatus("");
+        setScannerError("That QR code is not a Saba Cafe table ordering code.");
         return;
       }
       await validateTableSession({
@@ -314,7 +352,8 @@ export function OrderFlow() {
         token: scannedUrl.searchParams.get("token")
       });
     } catch {
-      setScannerMessage("That QR code could not be read as a table ordering link.");
+      setScannerStatus("");
+      setScannerError("That QR code could not be read as a table ordering link.");
     }
   }
 
@@ -740,13 +779,24 @@ export function OrderFlow() {
                 <X size={18} />
               </button>
             </div>
-            <div className="mt-5 overflow-hidden rounded-lg border border-date/10 bg-date">
+            <div className="relative mt-5 overflow-hidden rounded-lg border border-date/10 bg-date">
               <video ref={videoRef} className="aspect-square w-full object-cover" muted playsInline />
+              <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
+              <div className="pointer-events-none absolute inset-6 rounded-lg border-2 border-cream/80 shadow-[0_0_0_9999px_rgba(65,34,24,0.35)]" />
+              <div className="pointer-events-none absolute inset-x-8 top-1/2 h-0.5 -translate-y-1/2 bg-mint/80 shadow-[0_0_18px_rgba(38,133,111,0.9)]" />
             </div>
             <p className="mt-4 rounded-md bg-cream p-3 text-sm leading-6 text-date/70">
               Ordering is only available inside Saba Cafe from a table QR code. If the scanner does not open, use your phone camera to scan the QR card on the table.
             </p>
-            {scannerMessage ? <p className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-700">{scannerMessage}</p> : null}
+            {scannerStatus ? <p className="mt-3 rounded-md bg-mint/10 p-3 text-sm font-semibold text-mint">{scannerStatus}</p> : null}
+            {scannerError ? (
+              <div className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-700">
+                <p>{scannerError}</p>
+                <button type="button" onClick={openScanner} className="focus-ring mt-3 inline-flex min-h-10 items-center gap-2 rounded-full bg-date px-4 py-2 text-sm font-semibold text-cream">
+                  <Camera size={16} /> Try camera again
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
