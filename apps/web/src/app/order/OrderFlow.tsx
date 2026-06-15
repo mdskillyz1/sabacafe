@@ -32,6 +32,20 @@ type TableSession = {
   token: string;
 };
 
+function extractTableQrParams(rawValue: string) {
+  try {
+    const scannedUrl = new URL(rawValue, window.location.origin);
+    return {
+      type: scannedUrl.searchParams.get("type"),
+      tableId: scannedUrl.searchParams.get("tableId"),
+      table: scannedUrl.searchParams.get("table"),
+      token: scannedUrl.searchParams.get("token")
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function OrderFlow() {
   const basketRef = useRef<HTMLElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -63,6 +77,7 @@ export function OrderFlow() {
   const [scannerAttempt, setScannerAttempt] = useState(0);
   const [scannerStatus, setScannerStatus] = useState("");
   const [scannerError, setScannerError] = useState("");
+  const [scannerHasVideo, setScannerHasVideo] = useState(false);
   const [settings, setSettings] = useState<OperationsSettings>({
     pickupEnabled: false,
     deliveryEnabled: false,
@@ -100,6 +115,7 @@ export function OrderFlow() {
 
     const storedSession = window.sessionStorage.getItem("saba-table-session");
     if ((tableId || table) && token) {
+      setScannerStatus("Table QR found. Unlocking your menu...");
       validateTableSession({ tableId, table, token });
     } else if (storedSession) {
       try {
@@ -140,9 +156,25 @@ export function OrderFlow() {
     if (!scannerOpen) return;
     let stopped = false;
     let animationFrame = 0;
+    let lastFallbackScan = 0;
+
+    function scanCanvasFallback(video: HTMLVideoElement) {
+      if (!canvasRef.current || !video.videoWidth || !video.videoHeight) return "";
+      const canvas = canvasRef.current;
+      const maxWidth = 900;
+      const scale = Math.min(1, maxWidth / video.videoWidth);
+      canvas.width = Math.max(1, Math.floor(video.videoWidth * scale));
+      canvas.height = Math.max(1, Math.floor(video.videoHeight * scale));
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) return "";
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      return jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" })?.data ?? "";
+    }
 
     async function startScanner() {
       setScannerError("");
+      setScannerHasVideo(false);
       setScannerStatus("Asking for camera permission...");
       if (!navigator.mediaDevices?.getUserMedia) {
         setScannerStatus("");
@@ -160,6 +192,7 @@ export function OrderFlow() {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
         }
+        setScannerHasVideo(true);
         setScannerStatus("Camera ready. Point it at the QR code on your table.");
         const detector = window.BarcodeDetector ? new window.BarcodeDetector({ formats: ["qr_code"] }) : null;
         const scan = async () => {
@@ -171,18 +204,17 @@ export function OrderFlow() {
           try {
             let rawValue = "";
             if (detector) {
-              const codes = await detector.detect(videoRef.current);
-              rawValue = codes[0]?.rawValue ?? "";
-            } else if (canvasRef.current && videoRef.current.videoWidth && videoRef.current.videoHeight) {
-              const canvas = canvasRef.current;
-              canvas.width = videoRef.current.videoWidth;
-              canvas.height = videoRef.current.videoHeight;
-              const context = canvas.getContext("2d", { willReadFrequently: true });
-              if (context) {
-                context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                rawValue = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" })?.data ?? "";
+              try {
+                const codes = await detector.detect(videoRef.current);
+                rawValue = codes[0]?.rawValue ?? "";
+              } catch {
+                rawValue = "";
               }
+            }
+            const now = Date.now();
+            if (!rawValue && now - lastFallbackScan > 160) {
+              lastFallbackScan = now;
+              rawValue = scanCanvasFallback(videoRef.current);
             }
             if (rawValue) {
               stopped = true;
@@ -338,23 +370,23 @@ export function OrderFlow() {
   }
 
   async function handleScannedQr(rawValue: string) {
-    try {
-      const scannedUrl = new URL(rawValue);
-      const type = scannedUrl.searchParams.get("type");
-      if (type !== "dine-in" && type !== "dine_in") {
-        setScannerStatus("");
-        setScannerError("That QR code is not a Saba Cafe table ordering code.");
-        return;
-      }
-      await validateTableSession({
-        tableId: scannedUrl.searchParams.get("tableId"),
-        table: scannedUrl.searchParams.get("table"),
-        token: scannedUrl.searchParams.get("token")
-      });
-    } catch {
+    const params = extractTableQrParams(rawValue);
+    if (!params) {
       setScannerStatus("");
       setScannerError("That QR code could not be read as a table ordering link.");
+      return;
     }
+    const isTableLink = params.type === "dine-in" || params.type === "dine_in" || Boolean(params.token && (params.tableId || params.table));
+    if (!isTableLink) {
+      setScannerStatus("");
+      setScannerError("That QR code is not a Saba Cafe table ordering code.");
+      return;
+    }
+    await validateTableSession({
+      tableId: params.tableId,
+      table: params.table,
+      token: params.token
+    });
   }
 
   function lineUnitPrice(line: CartLine) {
@@ -784,6 +816,11 @@ export function OrderFlow() {
               <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
               <div className="pointer-events-none absolute inset-6 rounded-lg border-2 border-cream/80 shadow-[0_0_0_9999px_rgba(65,34,24,0.35)]" />
               <div className="pointer-events-none absolute inset-x-8 top-1/2 h-0.5 -translate-y-1/2 bg-mint/80 shadow-[0_0_18px_rgba(38,133,111,0.9)]" />
+              {!scannerHasVideo ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-date text-center text-sm font-semibold text-cream/80">
+                  Waiting for camera permission...
+                </div>
+              ) : null}
             </div>
             <p className="mt-4 rounded-md bg-cream p-3 text-sm leading-6 text-date/70">
               Ordering is only available inside Saba Cafe from a table QR code. If the scanner does not open, use your phone camera to scan the QR card on the table.
